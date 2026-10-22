@@ -1,0 +1,82 @@
+{% extends "courses/base.html" %}
+{% load timetable_tags %}
+{% block title %}我的課表｜選課系統{% endblock %}
+{% block content %}
+<div class="space-y-8">
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+    <div class="flex justify-between items-center mb-2">
+      <h1 class="text-2xl font-bold">我的課表</h1>
+      <a href="{% url 'course_list' %}" class="text-blue-600 dark:text-blue-400 underline">返回選課</a>
+    </div>
+    <p class="text-slate-500 dark:text-slate-400">當學期已選學分：<span class="font-semibold text-slate-800 dark:text-slate-100">{{ total_credits }}</span></p>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <h2 class="text-lg font-semibold mb-4">學分分類統計</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {% for item in category_summary %}
+      <div class="card-hover rounded-xl border dark:border-slate-700 p-4 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900">
+        <div class="text-sm text-slate-500 dark:text-slate-400">{{ item.label }}</div>
+        <div class="text-2xl font-bold">{{ item.credits }} <span class="text-sm font-normal text-slate-500">學分</span></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 overflow-x-auto">
+    <h2 class="text-lg font-semibold mb-4">週課表</h2>
+    <table class="w-full min-w-[640px] border-separate border-spacing-1 text-sm">
+      <thead>
+        <tr>
+          <th class="w-16 p-2 text-slate-500 dark:text-slate-400 font-normal">節次</th>
+          {% for day, label in weekday_labels %}
+          <th class="p-2 text-slate-500 dark:text-slate-400 font-normal">{{ label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in periods %}
+        <tr>
+          <td class="p-1 text-center text-slate-400">{{ period }}</td>
+          {% for day in weekdays %}
+          <td class="p-1.5 align-top h-16 border-t border-slate-200 dark:border-slate-700">
+            {% with cell=grid|get_item:day|get_item:period %}
+            {% if cell and not cell.skip %}
+            <div class="animate-pop-in rounded-xl p-2 m-0.5 bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-md ring-1 ring-white/20"
+                 style="min-height: {{ cell.span }}rem;">
+              <div class="font-semibold leading-tight">{{ cell.name }}</div>
+              <div class="text-xs opacity-90">{{ cell.classroom }}</div>
+            </div>
+            {% endif %}
+            {% endwith %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <h2 class="text-lg font-semibold mb-4">課程列表</h2>
+    {% if enrollments %}
+    <ul class="space-y-3">
+      {% for e in enrollments %}
+      <li class="card-hover border dark:border-slate-700 rounded-xl p-4">
+        <div class="font-semibold">[{{ e.course.code }}] {{ e.course.name }}</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400">
+          {{ e.course.get_category_display }} ・ {{ e.course.get_weekday_display }}
+          第 {{ e.course.start_period }}–{{ e.course.end_period }} 節 ・
+          {{ e.course.classroom }} ・ {{ e.course.credits }} 學分
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-slate-500">目前尚未選課。</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

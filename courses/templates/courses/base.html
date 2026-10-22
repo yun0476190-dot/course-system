@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}選課系統{% endblock %}</title>
+  <script>
+    // 在頁面渲染前套用主題，避免閃爍
+    (function () {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <style>
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pop-in {
+      from { opacity: 0; transform: scale(.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-up { animation: fade-up .5s ease-out both; }
+    .animate-pop-in  { animation: pop-in .35s ease-out both; }
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(59,130,246,.35); }
+    .btn-press:active { transform: scale(.96); }
+    .gradient-bg {
+      background: radial-gradient(1200px 600px at 10% -10%, #dbeafe 0%, transparent 60%),
+                  radial-gradient(900px 500px at 110% 0%, #ede9fe 0%, transparent 55%),
+                  #f1f5f9;
+    }
+    .dark .gradient-bg {
+      background: radial-gradient(1200px 600px at 10% -10%, #1e3a8a55 0%, transparent 60%),
+                  radial-gradient(900px 500px at 110% 0%, #4c1d9555 0%, transparent 55%),
+                  #0f172a;
+    }
+  </style>
+</head>
+<body class="gradient-bg text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+  <nav class="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-slate-900/70 border-b border-white/40 dark:border-slate-700/60">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-4 justify-between items-center">
+      <a href="{% url 'home' %}" class="text-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">🎓 選課系統</a>
+      <div class="flex flex-wrap gap-3 items-center text-sm">
+        {% if user.is_authenticated %}
+          {% if user.role == 'student' %}
+            <a href="{% url 'course_list' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">選課</a>
+            <a href="{% url 'my_timetable' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">我的課表</a>
+          {% elif user.role == 'teacher' %}
+            <a href="{% url 'teacher_courses' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">我的開課</a>
+          {% elif user.role == 'admin' or user.is_superuser %}
+            <a href="{% url 'admin_dashboard' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">管理面板</a>
+          {% endif %}
+          <form method="post" action="{% url 'logout' %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn-press px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-700 hover:opacity-80 transition">登出</button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn-press px-3 py-1 rounded-full bg-blue-600 text-white">登入</a>
+        {% endif %}
+        <button id="theme-toggle" type="button" aria-label="切換日夜模式"
+                class="btn-press w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-lg transition">
+          <span class="dark:hidden">🌙</span>
+          <span class="hidden dark:inline">☀️</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
+    {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+      <div class="animate-fade-up rounded-xl p-3 shadow {% if message.tags == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200{% else %}bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="animate-fade-up">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <script>
+    // 切換日夜模式：同時更新 class 與 localStorage
+    document.getElementById('theme-toggle').addEventListener('click', function () {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+  </script>
+</body>
+</html>

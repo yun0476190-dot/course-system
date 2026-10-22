@@ -1,0 +1,55 @@
+{% extends "courses/base.html" %}
+{% block title %}首頁｜選課系統{% endblock %}
+{% block content %}
+<div class="space-y-8">
+
+  <section class="relative overflow-hidden rounded-3xl p-10 text-white shadow-xl animate-pop-in bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600">
+    <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-white/10 blur-2xl"></div>
+    <div class="absolute -left-10 -bottom-20 w-72 h-72 rounded-full bg-fuchsia-400/20 blur-3xl"></div>
+    <div class="relative">
+      <p class="text-sm tracking-widest opacity-80 mb-2">SMART COURSE SYSTEM</p>
+      <h1 class="text-3xl md:text-4xl font-bold mb-3">大專院校課表與選課維護系統</h1>
+      {% if user.is_authenticated %}
+      <p class="opacity-90">歡迎回來，{{ user.display_name|default:user.username }}。請選擇下方功能開始使用。</p>
+      {% else %}
+      <p class="opacity-90">請先登入，依身分使用對應功能。</p>
+      <a href="{% url 'login' %}" class="inline-block mt-6 px-6 py-2.5 rounded-full bg-white text-indigo-700 font-semibold shadow btn-press hover:shadow-lg transition">前往登入</a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if user.is_authenticated and user.role == 'student' %}
+  <section class="grid md:grid-cols-2 gap-6">
+    <a href="{% url 'course_list' %}" class="card-hover animate-fade-up group rounded-3xl p-8 bg-white dark:bg-slate-800 shadow border-l-8 border-blue-500">
+      <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">📚</div>
+      <h2 class="text-xl font-bold mb-1">進入選課</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">搜尋課程、依類別篩選，即時加選或退選。</p>
+    </a>
+    <a href="{% url 'my_timetable' %}" class="card-hover animate-fade-up group rounded-3xl p-8 bg-white dark:bg-slate-800 shadow border-l-8 border-violet-500" style="animation-delay:120ms">
+      <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🗓️</div>
+      <h2 class="text-xl font-bold mb-1">我的課表</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">查看週課表與四類學分統計。</p>
+    </a>
+  </section>
+
+  {% elif user.is_authenticated and user.role == 'teacher' %}
+  <section class="grid md:grid-cols-2 gap-6">
+    <a href="{% url 'teacher_courses' %}" class="card-hover animate-fade-up group rounded-3xl p-8 bg-white dark:bg-slate-800 shadow border-l-8 border-emerald-500">
+      <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">👩‍🏫</div>
+      <h2 class="text-xl font-bold mb-1">我的開課</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">查看開授課程與各班選課名單。</p>
+    </a>
+  </section>
+
+  {% elif user.is_authenticated %}
+  <section class="grid md:grid-cols-2 gap-6">
+    <a href="{% url 'admin_dashboard' %}" class="card-hover animate-fade-up group rounded-3xl p-8 bg-white dark:bg-slate-800 shadow border-l-8 border-rose-500">
+      <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🛠️</div>
+      <h2 class="text-xl font-bold mb-1">管理面板</h2>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">強制退選、調整學分上限、查看全部課程。</p>
+    </a>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

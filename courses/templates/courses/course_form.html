@@ -1,0 +1,50 @@
+{% extends "courses/base.html" %}
+{% block title %}{% if course %}編輯課程{% else %}開設課程{% endif %}｜選課系統{% endblock %}
+{% block content %}
+<div class="space-y-8">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+    <h1 class="text-2xl font-bold">{% if course %}編輯課程：{{ course.name }}{% else %}開設新課程{% endif %}</h1>
+    <p class="text-slate-500 dark:text-slate-400 mt-1">送出前系統會自動檢查教師時間是否衝堂。</p>
+  </div>
+
+  <form method="post" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 grid md:grid-cols-2 gap-5">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="md:col-span-2 rounded-xl p-3 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">
+      {{ form.non_field_errors|join:" " }}
+    </div>
+    {% endif %}
+    {% for field in form %}
+    <div class="space-y-1 {% if field.name == 'syllabus' %}md:col-span-2{% endif %}">
+      <label for="{{ field.id_for_label }}" class="block text-sm text-slate-600 dark:text-slate-300">{{ field.label }}</label>
+      {{ field }}
+      {% for err in field.errors %}
+      <p class="text-sm text-red-600 dark:text-red-300">{{ err }}</p>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <div class="md:col-span-2 flex flex-wrap gap-4 pt-4 mt-2 border-t dark:border-slate-700">
+      <button type="submit" class="btn-press px-6 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">
+        {% if course %}儲存變更{% else %}建立課程{% endif %}
+      </button>
+      <a href="{% if user.role == 'admin' %}{% url 'admin_dashboard' %}{% else %}{% url 'teacher_courses' %}{% endif %}"
+         class="px-6 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">取消</a>
+    </div>
+  </form>
+
+  {% if course %}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 border-l-8 border-rose-500">
+    <h2 class="text-lg font-semibold">刪除課程</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-4">
+      刪除後無法復原，該課程的所有選課紀錄也會一併刪除。
+    </p>
+    <form method="post"
+          action="{% if user.role == 'admin' %}{% url 'admin_course_delete' course.id %}{% else %}{% url 'teacher_course_delete' course.id %}{% endif %}"
+          onsubmit="return confirm('確定要刪除「{{ course.name|escapejs }}」嗎？此操作無法復原。');">
+      {% csrf_token %}
+      <button type="submit" class="btn-press px-6 py-2 rounded-xl bg-rose-600 text-white hover:opacity-90">刪除此課程</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

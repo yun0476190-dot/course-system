@@ -1,0 +1,24 @@
+{% extends "courses/base.html" %}
+{% block title %}{{ course.name }}｜課程大綱{% endblock %}
+{% block content %}
+<div class="space-y-8">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+    <a href="{% url 'course_list' %}" class="text-blue-600 dark:text-blue-400 underline text-sm">← 返回課程列表</a>
+    <h1 class="text-2xl font-bold mt-2">[{{ course.code }}] {{ course.name }}</h1>
+    <p class="text-slate-500 dark:text-slate-400 mt-1">
+      {{ course.teacher.get_full_name|default:course.teacher.username }} ・ {{ course.get_category_display }} ・
+      {{ course.credits }} 學分 ・ {{ course.get_weekday_display }} 第 {{ course.start_period }}–{{ course.end_period }} 節 ・
+      {{ course.classroom }} ・ 已選 {{ enrolled_count }} / {{ course.capacity }} 人
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <h2 class="text-lg font-semibold mb-4">課程大綱</h2>
+    {% if course.syllabus %}
+    <div class="whitespace-pre-line leading-relaxed text-slate-700 dark:text-slate-200">{{ course.syllabus }}</div>
+    {% else %}
+    <p class="text-slate-500">尚未填寫課程大綱。</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

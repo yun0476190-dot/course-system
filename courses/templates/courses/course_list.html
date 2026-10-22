@@ -1,0 +1,155 @@
+{% extends "courses/base.html" %}
+{% block title %}課程選課｜選課系統{% endblock %}
+{% block content %}
+<div class="space-y-6">
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in space-y-4">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <h1 class="text-2xl font-bold">課程選課</h1>
+      <span class="text-sm text-slate-500 dark:text-slate-400">共 {{ courses|length }} 門課</span>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-4">
+      <input id="search" type="text" placeholder="搜尋課名或課程代碼…"
+             class="md:col-span-2 border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <select id="filter-category"
+              class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+        <option value="">全部類別</option>
+        <option value="通識必修">通識必修</option>
+        <option value="專業必修">專業必修</option>
+        <option value="專業選修">專業選修</option>
+        <option value="通識興趣選修">通識興趣選修</option>
+      </select>
+      <select id="filter-department"
+              class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+        <option value="">全部系所</option>
+        {% regroup courses|dictsort:"department" by department as dept_groups %}
+        {% for group in dept_groups %}
+        {% if group.grouper %}<option value="{{ group.grouper }}">{{ group.grouper }}</option>{% endif %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <p id="empty-hint" class="hidden text-slate-500">沒有符合條件的課程。</p>
+  </div>
+
+  <div id="toast-area" class="fixed top-24 right-4 z-50 space-y-2 w-80"></div>
+
+  <div id="course-list" class="grid md:grid-cols-2 gap-5">
+    {% for course in courses %}
+    <div id="course-{{ course.id }}"
+         class="course-card scroll-mt-28 animate-fade-up card-hover relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow p-5 pl-7 flex flex-wrap gap-4 justify-between items-center"
+         data-name="{{ course.name }}"
+         data-code="{{ course.code }}"
+         data-category="{{ course.get_category_display }}"
+         data-department="{{ course.department }}"
+         style="animation-delay: {{ forloop.counter0 }}0ms;">
+      <span class="absolute left-0 top-0 bottom-0 w-2
+        {% if course.category == 'ge_required' %}bg-amber-400
+        {% elif course.category == 'major_required' %}bg-rose-500
+        {% elif course.category == 'major_elective' %}bg-blue-500
+        {% else %}bg-emerald-500{% endif %}"></span>
+
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'course_detail' course.id %}" class="font-semibold hover:text-blue-600 hover:underline">[{{ course.code }}] {{ course.name }}</a>
+          <span class="text-xs px-2 py-0.5 rounded-full text-white
+            {% if course.category == 'ge_required' %}bg-amber-500
+            {% elif course.category == 'major_required' %}bg-rose-500
+            {% elif course.category == 'major_elective' %}bg-blue-500
+            {% else %}bg-emerald-500{% endif %}">{{ course.get_category_display }}</span>
+        </div>
+        <div class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          {{ course.teacher.get_full_name|default:course.teacher.username }} ・ {{ course.credits }} 學分 ・
+          {{ course.get_weekday_display }} 第 {{ course.start_period }}–{{ course.end_period }} 節 ・
+          {{ course.classroom }} ・ 上限 {{ course.capacity }} 人
+        </div>
+      </div>
+
+      <button
+        type="button"
+        data-course-id="{{ course.id }}"
+        data-action="{% if course.id in enrolled_ids %}drop{% else %}enroll{% endif %}"
+        class="action-btn btn-press px-4 py-2 rounded-xl text-white transition hover:opacity-90 {% if course.id in enrolled_ids %}bg-slate-500{% else %}bg-blue-600{% endif %}">
+        {% if course.id in enrolled_ids %}退選{% else %}加選{% endif %}
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+  const csrftoken = "{{ csrf_token }}";
+
+  const searchInput = document.getElementById("search");
+  const categorySelect = document.getElementById("filter-category");
+  const departmentSelect = document.getElementById("filter-department");
+  const cards = document.querySelectorAll(".course-card");
+  const emptyHint = document.getElementById("empty-hint");
+
+  function applyFilter() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    const category = categorySelect.value;
+    const department = departmentSelect.value;
+    let visible = 0;
+    cards.forEach((card) => {
+      const matchKeyword = !keyword
+        || card.dataset.name.toLowerCase().includes(keyword)
+        || card.dataset.code.toLowerCase().includes(keyword);
+      const matchCategory = !category || card.dataset.category === category;
+      const matchDept = !department || card.dataset.department === department;
+      const show = matchKeyword && matchCategory && matchDept;
+      card.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+    emptyHint.classList.toggle("hidden", visible > 0);
+  }
+
+  searchInput.addEventListener("input", applyFilter);
+  categorySelect.addEventListener("change", applyFilter);
+  departmentSelect.addEventListener("change", applyFilter);
+
+  function showToast(message, ok) {
+    const area = document.getElementById("toast-area");
+    const el = document.createElement("div");
+    el.className = "animate-pop-in rounded-xl p-3 shadow " + (ok ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700");
+    el.textContent = message;
+    area.prepend(el);
+    setTimeout(() => {
+      el.style.transition = "opacity .3s";
+      el.style.opacity = "0";
+      setTimeout(() => el.remove(), 300);
+    }, 3500);
+  }
+
+  document.querySelectorAll(".action-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const courseId = btn.dataset.courseId;
+      const action = btn.dataset.action;
+      const scrollY = window.scrollY;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/courses/${courseId}/${action}/`, {
+          method: "POST",
+          headers: { "X-CSRFToken": csrftoken, "X-Requested-With": "XMLHttpRequest" },
+        });
+        const data = await res.json();
+        showToast(data.message, data.ok);
+        if (data.ok) {
+          const isEnroll = action === "enroll";
+          btn.dataset.action = isEnroll ? "drop" : "enroll";
+          btn.textContent = isEnroll ? "退選" : "加選";
+          btn.classList.toggle("bg-blue-600", !isEnroll);
+          btn.classList.toggle("bg-slate-500", isEnroll);
+        }
+      } catch (err) {
+        showToast("網路錯誤，請稍後再試。", false);
+      } finally {
+        btn.disabled = false;
+        window.scrollTo(0, scrollY);
+      }
+    });
+  });
+</script>
+{% endblock %}
