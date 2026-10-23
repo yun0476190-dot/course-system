@@ -2,12 +2,16 @@
 {% block title %}選課名單｜選課系統{% endblock %}
 {% block content %}
 <div class="space-y-8">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 space-y-2">
     <a href="{% url 'teacher_courses' %}" class="text-blue-600 dark:text-blue-400 underline text-sm">← 返回我的開課</a>
-    <h1 class="text-2xl font-bold mt-2">[{{ course.code }}] {{ course.name }}</h1>
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <h1 class="text-2xl font-bold">[{{ course.code }}] {{ course.name }}</h1>
+      <a href="{% url 'course_roster_csv' course.id %}" class="btn-press px-4 py-2 rounded-xl bg-blue-600 text-white text-sm hover:opacity-90">⬇ 下載名單（Excel）</a>
+    </div>
     <p class="text-slate-500 dark:text-slate-400">
-      {{ course.get_weekday_display }} 第 {{ course.start_period }}–{{ course.end_period }} 節 ・ {{ course.classroom }}
+      {{ course.time_label }} ・ {{ course.classroom.name }}
       ・ 已選 <span class="font-semibold">{{ enrollments|length }}</span> / {{ course.capacity }} 人
+      {% if waitlist %}・候補 {{ waitlist|length }} 人{% endif %}
     </p>
   </div>
 
@@ -22,6 +26,7 @@
             <th class="py-2 px-3 font-normal">學號</th>
             <th class="py-2 px-3 font-normal">姓名</th>
             <th class="py-2 px-3 font-normal">系所</th>
+            <th class="py-2 px-3 font-normal">年級</th>
             <th class="py-2 px-3 font-normal">選課時間</th>
           </tr>
         </thead>
@@ -32,6 +37,7 @@
             <td class="py-3 px-3">{{ e.student.student_profile.student_no|default:"-" }}</td>
             <td class="py-3 px-3">{{ e.student.display_name|default:e.student.username }}</td>
             <td class="py-3 px-3">{{ e.student.student_profile.department|default:"-" }}</td>
+            <td class="py-3 px-3">{{ e.student.student_profile.get_grade_display|default:"-" }}</td>
             <td class="py-3 px-3 rounded-r-xl">{{ e.enrolled_at|date:"Y-m-d H:i" }}</td>
           </tr>
           {% endfor %}
@@ -42,5 +48,34 @@
     <p class="text-slate-500">目前尚無學生選這門課。</p>
     {% endif %}
   </div>
+
+  {% if waitlist %}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <h2 class="text-lg font-semibold mb-1">候補名單</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">有名額空出時，系統會依順位自動加選（衝堂或學分超過上限的學生會被跳過）。</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+        <thead class="text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="py-2 px-3 font-normal">順位</th>
+            <th class="py-2 px-3 font-normal">學號</th>
+            <th class="py-2 px-3 font-normal">姓名</th>
+            <th class="py-2 px-3 font-normal">登記時間</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in waitlist %}
+          <tr class="bg-slate-50 dark:bg-slate-700/50">
+            <td class="py-3 px-3 rounded-l-xl">{{ forloop.counter }}</td>
+            <td class="py-3 px-3">{{ entry.student.student_profile.student_no|default:"-" }}</td>
+            <td class="py-3 px-3">{{ entry.student.display_name|default:entry.student.username }}</td>
+            <td class="py-3 px-3 rounded-r-xl">{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,25 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}{% if room %}編輯教室{% else %}新增教室{% endif %}｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+  <h1 class="text-xl font-bold">{% if room %}編輯教室：{{ room.name }}{% else %}新增教室{% endif %}</h1>
+  <p class="text-slate-500 dark:text-slate-400 mt-1">容納人數不能少於排在這間教室的課程人數上限。</p>
+</div>
+
+<form method="post" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 grid md:grid-cols-2 gap-5">
+  {% csrf_token %}
+  {% for field in form %}
+  <div class="space-y-1">
+    <label for="{{ field.id_for_label }}" class="block text-sm text-slate-600 dark:text-slate-300">{{ field.label }}</label>
+    {{ field }}
+    {% for err in field.errors %}
+    <p class="text-sm text-red-600 dark:text-red-300">{{ err }}</p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="md:col-span-2 flex flex-wrap gap-4 pt-4 mt-2 border-t dark:border-slate-700">
+    <button type="submit" class="btn-press px-6 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">{% if room %}儲存變更{% else %}新增教室{% endif %}</button>
+    <a href="{% url 'admin_classrooms' %}" class="px-6 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">取消</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "courses/base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <nav aria-label="管理功能" class="print:hidden bg-white dark:bg-slate-800 rounded-2xl shadow px-3 py-2 overflow-x-auto">
+    {% with on="bg-blue-600 text-white" off="hover:bg-slate-100 dark:hover:bg-slate-700" %}
+    <div class="flex gap-1 text-sm whitespace-nowrap">
+      <a href="{% url 'admin_dashboard' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'overview' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'overview' %}aria-current="page"{% endif %}>總覽</a>
+      <a href="{% url 'admin_students' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'students' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'students' %}aria-current="page"{% endif %}>學生</a>
+      <a href="{% url 'admin_teachers' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'teachers' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'teachers' %}aria-current="page"{% endif %}>教師</a>
+      <a href="{% url 'admin_courses' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'courses' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'courses' %}aria-current="page"{% endif %}>課程</a>
+      <a href="{% url 'admin_classrooms' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'classrooms' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'classrooms' %}aria-current="page"{% endif %}>教室</a>
+      <a href="{% url 'admin_enrollments' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'enrollments' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'enrollments' %}aria-current="page"{% endif %}>選課紀錄</a>
+      <a href="{% url 'admin_logs' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'logs' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'logs' %}aria-current="page"{% endif %}>操作紀錄</a>
+      <a href="{% url 'admin_import' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'import' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'import' %}aria-current="page"{% endif %}>批次匯入</a>
+      <a href="{% url 'admin_settings' %}" class="px-3 py-1.5 rounded-lg {% if tab == 'settings' %}{{ on }}{% else %}{{ off }}{% endif %}" {% if tab == 'settings' %}aria-current="page"{% endif %}>系統設定</a>
+    </div>
+    {% endwith %}
+  </nav>
+
+  {% block manage_content %}{% endblock %}
+</div>
+{% endblock %}

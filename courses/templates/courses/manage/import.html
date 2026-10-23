@@ -1,0 +1,50 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}批次匯入｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in space-y-2">
+  <h1 class="text-xl font-bold">批次匯入</h1>
+  <p class="text-slate-500 dark:text-slate-400">
+    先下載範例檔，用 Excel 填好後「另存新檔」成 CSV 再上傳。系統會逐列檢查，<strong>全部正確才會匯入</strong>，有任何錯誤都不會寫入資料。
+  </p>
+  <p class="text-sm text-slate-500 dark:text-slate-400">建議順序：教師 → 學生 → 課程（課程需要用到教師帳號與教室）。所有人使用相同的初始密碼時，匯入速度最快。</p>
+</div>
+
+{% if result %}
+<div class="rounded-2xl p-5 bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-200 space-y-2">
+  <h2 class="font-semibold">{{ result.label }}資料有 {{ result.errors|length }} 列需要修正，這次沒有匯入任何資料：</h2>
+  <ul class="list-disc pl-5 space-y-1 text-sm">
+    {% for number, message in result.errors %}
+    <li>第 {{ number }} 列：{{ message }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="grid lg:grid-cols-3 gap-6">
+  {% for section in sections %}
+  <section class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 flex flex-col gap-4">
+    <div>
+      <h2 class="text-lg font-semibold">匯入{{ section.spec.label }}</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">一次最多 {{ section.spec.max_rows }} 筆</p>
+    </div>
+    <div class="text-sm">
+      <p class="text-slate-500 dark:text-slate-400 mb-1">欄位（<span class="text-rose-600 dark:text-rose-300">*</span> 為必填）：</p>
+      <p class="leading-relaxed">
+        {% for key, label, required in section.spec.columns %}{{ label }}{% if required %}<span class="text-rose-600 dark:text-rose-300">*</span>{% endif %}{% if not forloop.last %}、{% endif %}{% endfor %}
+      </p>
+    </div>
+    <a href="{% url 'admin_import_template' section.kind %}" class="self-start text-sm px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">⬇ 下載範例檔</a>
+    <form method="post" enctype="multipart/form-data" class="mt-auto space-y-2">
+      {% csrf_token %}
+      <input type="hidden" name="kind" value="{{ section.kind }}">
+      <input type="file" name="{{ section.form.file.html_name }}" accept=".csv" required
+             class="block w-full text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-slate-200 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200">
+      {% for err in section.form.file.errors %}
+      <p class="text-sm text-red-600 dark:text-red-300">{{ err }}</p>
+      {% endfor %}
+      <button type="submit" class="btn-press w-full px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">匯入{{ section.spec.label }}</button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

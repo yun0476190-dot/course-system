@@ -2,7 +2,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Course, Enrollment, StudentProfile, TeacherProfile, User
+from .models import (
+    ActivityLog, Classroom, Course, Enrollment, StudentProfile, SystemSetting,
+    TeacherProfile, User, WaitlistEntry,
+)
 
 
 @admin.register(User)
@@ -16,7 +19,8 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(StudentProfile)
 class StudentProfileAdmin(admin.ModelAdmin):
-    list_display = ("student_no", "user", "department", "max_credits")
+    list_display = ("student_no", "user", "department", "grade", "min_credits", "max_credits")
+    list_filter = ("grade", "department")
     search_fields = ("student_no", "user__display_name")
 
 
@@ -24,6 +28,12 @@ class StudentProfileAdmin(admin.ModelAdmin):
 class TeacherProfileAdmin(admin.ModelAdmin):
     list_display = ("teacher_no", "user", "department")
     search_fields = ("teacher_no", "user__display_name")
+
+
+@admin.register(Classroom)
+class ClassroomAdmin(admin.ModelAdmin):
+    list_display = ("name", "capacity")
+    search_fields = ("name",)
 
 
 @admin.register(Course)
@@ -41,3 +51,33 @@ class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ("student", "course", "enrolled_at")
     list_filter = ("course",)
     search_fields = ("student__username", "course__name")
+
+
+@admin.register(WaitlistEntry)
+class WaitlistEntryAdmin(admin.ModelAdmin):
+    list_display = ("student", "course", "created_at")
+    list_filter = ("course",)
+    search_fields = ("student__username", "course__name")
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    """操作紀錄只供查詢，不能在後台修改或刪除。"""
+
+    list_display = ("created_at", "actor", "action", "target", "ip_address")
+    list_filter = ("action",)
+    search_fields = ("actor__username", "target", "detail")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SystemSetting)
+class SystemSettingAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "enrollment_start", "enrollment_end", "semester_start", "semester_end")

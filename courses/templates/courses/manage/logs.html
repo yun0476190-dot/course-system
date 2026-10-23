@@ -1,0 +1,50 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}操作紀錄｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <h1 class="text-xl font-bold mb-4">操作紀錄</h1>
+
+  <form method="get" class="grid sm:grid-cols-2 lg:grid-cols-[2fr_1.5fr_1fr_1fr_auto] gap-3 items-end mb-2">
+    {% for field in form %}
+    <div class="space-y-1">
+      <label for="{{ field.id_for_label }}" class="block text-xs text-slate-500 dark:text-slate-400">{{ field.label }}</label>
+      {{ field }}
+    </div>
+    {% endfor %}
+    <div class="flex gap-3 items-center">
+      <button class="btn-press px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:opacity-80">篩選</button>
+      {% if request.GET %}<a href="{% url 'admin_logs' %}" class="text-sm text-blue-600 dark:text-blue-400 underline whitespace-nowrap">清除</a>{% endif %}
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+      <thead class="text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2 px-3 font-normal">時間</th>
+          <th class="py-2 px-3 font-normal">操作者</th>
+          <th class="py-2 px-3 font-normal">動作</th>
+          <th class="py-2 px-3 font-normal">對象</th>
+          <th class="py-2 px-3 font-normal">說明</th>
+          <th class="py-2 px-3 font-normal">IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in page %}
+        <tr class="bg-slate-50 dark:bg-slate-700/50">
+          <td class="py-3 px-3 rounded-l-xl tabular-nums whitespace-nowrap">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+          <td class="py-3 px-3">{% if log.actor %}{{ log.actor.username }}{% else %}<span class="text-slate-500 dark:text-slate-400">系統</span>{% endif %}</td>
+          <td class="py-3 px-3 whitespace-nowrap">{{ log.get_action_display }}</td>
+          <td class="py-3 px-3">{{ log.target }}</td>
+          <td class="py-3 px-3">{{ log.detail }}</td>
+          <td class="py-3 px-3 rounded-r-xl tabular-nums">{{ log.ip_address|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-6 text-center text-slate-500">沒有符合條件的紀錄。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "courses/manage/_pagination.html" %}
+</div>
+{% endblock %}

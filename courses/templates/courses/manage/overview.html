@@ -1,0 +1,290 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}管理總覽｜選課系統{% endblock %}
+{% block manage_content %}
+<style>
+  /* 圖表色彩：每張圖都只有一個數列，所以只用一個藍色；深色模式用同色系另外挑的色階 */
+  .viz-root { --viz-fill: #2a78d6; --viz-track: #cde2fb; --viz-baseline: #cbd5e1; }
+  .dark .viz-root { --viz-fill: #3987e5; --viz-track: #0d366b; --viz-baseline: #475569; }
+  .viz-fill { background: var(--viz-fill); }
+  .viz-track { background: var(--viz-track); }
+  .viz-mark { cursor: default; }
+  .viz-mark:hover .viz-fill, .viz-mark:focus-visible .viz-fill { filter: brightness(1.15); }
+  .viz-mark:focus-visible { outline: 2px solid var(--viz-fill); outline-offset: 2px; }
+</style>
+
+<div class="viz-root space-y-6">
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 flex flex-wrap justify-between items-center gap-4 animate-pop-in">
+    <div>
+      <h1 class="text-2xl font-bold">管理總覽</h1>
+      <p class="text-slate-500 dark:text-slate-400 mt-1">全校選課狀況一覽，點數字可前往對應的管理頁面。</p>
+    </div>
+    <a href="{% url 'admin_settings' %}"
+       class="text-sm px-3 py-1.5 rounded-full {% if status == 'open' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200{% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200{% endif %}">
+      {% if status == 'open' %}● 加退選開放中{% elif status == 'not_started' %}⏸ 加退選尚未開始{% else %}⏹ 加退選已結束{% endif %}
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    {% for kpi in kpis %}
+    {% if kpi.url %}
+    <a href="{{ kpi.url }}" class="card-hover block rounded-2xl bg-white dark:bg-slate-800 shadow p-4">
+      <div class="text-sm text-slate-500 dark:text-slate-400">{{ kpi.label }}</div>
+      <div class="mt-1 text-3xl font-semibold">{{ kpi.value }}</div>
+    </a>
+    {% else %}
+    <div class="rounded-2xl bg-white dark:bg-slate-800 shadow p-4">
+      <div class="text-sm text-slate-500 dark:text-slate-400">{{ kpi.label }}</div>
+      <div class="mt-1 text-3xl font-semibold">{{ kpi.value }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <section data-chart-card class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+      <div>
+        <h2 class="text-lg font-semibold">各課程選課率</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">已選人數 ÷ 人數上限，選課率最高的 10 門課</p>
+      </div>
+      <button type="button" data-toggle-table aria-pressed="false" class="text-sm px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:opacity-80">表格</button>
+    </div>
+    <div data-view="chart">
+      <div class="grid md:grid-cols-2 gap-x-10 gap-y-4">
+        {% for column in fill_columns %}
+        <ul class="space-y-4">
+          {% for course in column %}
+          <li class="viz-mark rounded" tabindex="0"
+              data-tip-value="{{ course.num_enrolled }} / {{ course.capacity }} 人（{{ course.fill_pct }}%）"
+              data-tip-label="[{{ course.code }}] {{ course.name }}{% if course.num_waiting %}・候補 {{ course.num_waiting }} 人{% endif %}">
+            <div class="flex justify-between gap-3 text-sm">
+              <span class="truncate">[{{ course.code }}] {{ course.name }}</span>
+              <span class="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{{ course.num_enrolled }}/{{ course.capacity }}{% if course.fill_pct >= 100 %}・額滿{% endif %}</span>
+            </div>
+            <div class="viz-track mt-1.5 h-2 rounded overflow-hidden">
+              <div class="viz-fill h-full" style="width: {{ course.fill_pct }}%"></div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endfor %}
+      </div>
+      {% if not top_courses %}<p class="text-slate-500">還沒有課程。</p>{% endif %}
+    </div>
+    <div data-view="table" class="hidden overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="py-2 pr-3 font-normal">課程</th>
+            <th class="py-2 px-3 font-normal text-right">已選</th>
+            <th class="py-2 px-3 font-normal text-right">上限</th>
+            <th class="py-2 px-3 font-normal text-right">選課率</th>
+            <th class="py-2 pl-3 font-normal text-right">候補</th>
+          </tr>
+        </thead>
+        <tbody class="tabular-nums">
+          {% for course in top_courses %}
+          <tr class="border-t border-slate-200 dark:border-slate-700">
+            <td class="py-2 pr-3">[{{ course.code }}] {{ course.name }}</td>
+            <td class="py-2 px-3 text-right">{{ course.num_enrolled }}</td>
+            <td class="py-2 px-3 text-right">{{ course.capacity }}</td>
+            <td class="py-2 px-3 text-right">{{ course.fill_pct }}%</td>
+            <td class="py-2 pl-3 text-right">{{ course.num_waiting }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'admin_courses' %}" class="inline-block mt-5 text-sm text-blue-600 dark:text-blue-400 underline">查看全部課程</a>
+  </section>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <section data-chart-card class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+        <div>
+          <h2 class="text-lg font-semibold">各類別選課人次</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">每位學生選一門課算一人次</p>
+        </div>
+        <button type="button" data-toggle-table aria-pressed="false" class="text-sm px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:opacity-80">表格</button>
+      </div>
+      <div data-view="chart" class="space-y-3">
+        {% for row in category_rows %}
+        <div class="viz-mark grid grid-cols-[6.5rem_1fr] items-center gap-3 rounded" tabindex="0"
+             data-tip-value="{{ row.count }} 人次" data-tip-label="{{ row.label }}">
+          <span class="text-sm text-slate-600 dark:text-slate-300">{{ row.label }}</span>
+          <div class="flex items-center gap-2 py-1" style="border-left: 1px solid var(--viz-baseline)">
+            <div class="viz-fill h-4 rounded-r" style="width: calc((100% - 3rem) * {{ row.pct }} / 100)"></div>
+            <span class="text-xs tabular-nums text-slate-600 dark:text-slate-300">{{ row.count }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div data-view="table" class="hidden">
+        <table class="w-full text-left text-sm">
+          <thead class="text-slate-500 dark:text-slate-400">
+            <tr><th class="py-2 pr-3 font-normal">課程類別</th><th class="py-2 pl-3 font-normal text-right">人次</th></tr>
+          </thead>
+          <tbody class="tabular-nums">
+            {% for row in category_rows %}
+            <tr class="border-t border-slate-200 dark:border-slate-700">
+              <td class="py-2 pr-3">{{ row.label }}</td><td class="py-2 pl-3 text-right">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section data-chart-card class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+        <div>
+          <h2 class="text-lg font-semibold">學生學分分布</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">啟用中學生目前的已選學分（預設下限 16 學分）</p>
+        </div>
+        <button type="button" data-toggle-table aria-pressed="false" class="text-sm px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:opacity-80">表格</button>
+      </div>
+      <div data-view="chart">
+        <div class="relative h-44" style="border-bottom: 1px solid var(--viz-baseline)">
+          <div class="absolute inset-x-0 bottom-0 top-6 flex">
+            {% for row in bucket_rows %}
+            <div class="viz-mark relative h-full flex-1 flex justify-center rounded" tabindex="0"
+                 data-tip-value="{{ row.count }} 人" data-tip-label="已選 {{ row.label }} 學分">
+              <div class="viz-fill absolute bottom-0 w-6 rounded-t" style="height: {{ row.pct }}%"></div>
+              <span class="absolute text-xs tabular-nums text-slate-600 dark:text-slate-300" style="bottom: calc({{ row.pct }}% + 4px)">{{ row.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="flex mt-2">
+          {% for row in bucket_rows %}
+          <span class="flex-1 text-center text-xs text-slate-500 dark:text-slate-400">{{ row.label }}</span>
+          {% endfor %}
+        </div>
+        <p class="mt-1 text-center text-xs text-slate-500 dark:text-slate-400">已選學分</p>
+      </div>
+      <div data-view="table" class="hidden">
+        <table class="w-full text-left text-sm">
+          <thead class="text-slate-500 dark:text-slate-400">
+            <tr><th class="py-2 pr-3 font-normal">已選學分</th><th class="py-2 pl-3 font-normal text-right">學生人數</th></tr>
+          </thead>
+          <tbody class="tabular-nums">
+            {% for row in bucket_rows %}
+            <tr class="border-t border-slate-200 dark:border-slate-700">
+              <td class="py-2 pr-3">{{ row.label }}</td><td class="py-2 pl-3 text-right">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <section class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">候補人數最多的課程</h2>
+      {% if busiest %}
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="py-2 pr-3 font-normal">課程</th>
+            <th class="py-2 px-3 font-normal text-right">已選／上限</th>
+            <th class="py-2 pl-3 font-normal text-right">候補</th>
+          </tr>
+        </thead>
+        <tbody class="tabular-nums">
+          {% for course in busiest %}
+          <tr class="border-t border-slate-200 dark:border-slate-700">
+            <td class="py-2 pr-3"><a href="{% url 'admin_course_edit' course.id %}" class="hover:underline">[{{ course.code }}] {{ course.name }}</a></td>
+            <td class="py-2 px-3 text-right">{{ course.num_enrolled }}／{{ course.capacity }}</td>
+            <td class="py-2 pl-3 text-right">{{ course.num_waiting }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">調高人數上限後，系統會依序自動遞補候補學生。</p>
+      {% else %}
+      <p class="text-slate-500 dark:text-slate-400">目前沒有學生在候補。</p>
+      {% endif %}
+    </section>
+
+    <section class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+      <div class="flex flex-wrap justify-between items-baseline gap-2 mb-4">
+        <h2 class="text-lg font-semibold">未達學分下限的學生</h2>
+        <span class="text-sm text-slate-500 dark:text-slate-400">共 {{ below_min_count }} 人</span>
+      </div>
+      {% if below_min %}
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500 dark:text-slate-400">
+          <tr>
+            <th class="py-2 pr-3 font-normal">學號</th>
+            <th class="py-2 px-3 font-normal">姓名</th>
+            <th class="py-2 pl-3 font-normal text-right">已選／下限</th>
+          </tr>
+        </thead>
+        <tbody class="tabular-nums">
+          {% for s in below_min %}
+          <tr class="border-t border-slate-200 dark:border-slate-700">
+            <td class="py-2 pr-3">{{ s.student_no }}</td>
+            <td class="py-2 px-3">{{ s.user.display_name|default:s.user.username }}</td>
+            <td class="py-2 pl-3 text-right">{{ s.total_credits }}／{{ s.min_credits }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if below_min_count > below_min|length %}
+      <a href="{% url 'admin_students' %}?below_min=1" class="inline-block mt-3 text-sm text-blue-600 dark:text-blue-400 underline">查看全部 {{ below_min_count }} 人</a>
+      {% endif %}
+      {% else %}
+      <p class="text-slate-500 dark:text-slate-400">所有學生都已達到學分下限。</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<div id="viz-tip" role="tooltip" class="pointer-events-none fixed z-50 hidden rounded-lg bg-slate-900 text-white text-xs px-3 py-2 shadow-lg dark:bg-slate-100 dark:text-slate-900"></div>
+
+<script>
+  (() => {
+    const tip = document.getElementById("viz-tip");
+
+    // 提示框：數值在前、名稱在後；名稱來自資料，一律用 textContent 放入
+    function showTip(el, x, y) {
+      const value = document.createElement("div");
+      value.className = "font-semibold text-sm";
+      value.textContent = el.dataset.tipValue;
+      const label = document.createElement("div");
+      label.className = "opacity-80";
+      label.textContent = el.dataset.tipLabel;
+      tip.replaceChildren(value, label);
+      tip.classList.remove("hidden");
+      const box = tip.getBoundingClientRect();
+      tip.style.left = Math.max(8, Math.min(x + 14, window.innerWidth - box.width - 8)) + "px";
+      tip.style.top = Math.max(8, y - box.height - 12) + "px";
+    }
+    const hideTip = () => tip.classList.add("hidden");
+
+    document.querySelectorAll("[data-tip-value]").forEach((el) => {
+      el.addEventListener("pointermove", (e) => showTip(el, e.clientX, e.clientY));
+      el.addEventListener("pointerleave", hideTip);
+      el.addEventListener("focus", () => {
+        const r = el.getBoundingClientRect();
+        showTip(el, r.left + r.width / 2, r.top);
+      });
+      el.addEventListener("blur", hideTip);
+    });
+
+    // 圖表／表格切換：每張圖都能改用表格閱讀
+    document.querySelectorAll("[data-toggle-table]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest("[data-chart-card]");
+        const table = card.querySelector("[data-view='table']");
+        const showTable = table.classList.contains("hidden");
+        table.classList.toggle("hidden", !showTable);
+        card.querySelector("[data-view='chart']").classList.toggle("hidden", showTable);
+        btn.textContent = showTable ? "圖表" : "表格";
+        btn.setAttribute("aria-pressed", String(showTable));
+      });
+    });
+  })();
+</script>
+{% endblock %}

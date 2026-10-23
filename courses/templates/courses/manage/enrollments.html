@@ -1,0 +1,51 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}選課紀錄｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <h1 class="text-xl font-bold mb-1">選課紀錄</h1>
+  <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">強制退選不受學分下限限制；空出的名額會依序遞補候補學生。</p>
+
+  <form method="get" class="flex flex-wrap items-center gap-3 mb-2">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜尋學生（帳號、姓名、學號）或課程（代碼、名稱）"
+           class="flex-1 min-w-[12rem] border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+    <button class="btn-press px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:opacity-80">搜尋</button>
+    {% if q %}<a href="{% url 'admin_enrollments' %}" class="text-sm text-blue-600 dark:text-blue-400 underline">清除條件</a>{% endif %}
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+      <thead class="text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2 px-3 font-normal">學生</th>
+          <th class="py-2 px-3 font-normal">課程</th>
+          <th class="py-2 px-3 font-normal">選課時間</th>
+          <th class="py-2 px-3 font-normal">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in page %}
+        <tr class="bg-slate-50 dark:bg-slate-700/50">
+          <td class="py-3 px-3 rounded-l-xl">
+            {{ e.student.display_name|default:e.student.username }}
+            <div class="text-xs text-slate-500 dark:text-slate-400">{{ e.student.student_profile.student_no|default:e.student.username }}</div>
+          </td>
+          <td class="py-3 px-3">[{{ e.course.code }}] {{ e.course.name }}</td>
+          <td class="py-3 px-3 tabular-nums">{{ e.enrolled_at|date:"Y-m-d H:i" }}</td>
+          <td class="py-3 px-3 rounded-r-xl">
+            <form method="post" action="{% url 'admin_force_drop' e.id %}"
+                  onsubmit="return confirm('確定要強制退選此學生的這門課嗎？');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button class="btn-press px-3 py-1 rounded-lg bg-rose-600 text-white hover:opacity-90">強制退選</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="py-6 text-center text-slate-500">沒有符合條件的選課紀錄。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "courses/manage/_pagination.html" %}
+</div>
+{% endblock %}

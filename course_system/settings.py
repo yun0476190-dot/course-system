@@ -2,16 +2,19 @@
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+from django.core.exceptions import ImproperlyConfigured
 
-# 正式環境請在雲端平台設定 DJANGO_SECRET_KEY；本機沒設定時使用開發用金鑰
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-local-dev-key-change-me",
-)
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 雲端平台會設定 RENDER 環境變數；本機則為 DEBUG 開啟
 DEBUG = os.environ.get("RENDER") is None
+
+# 正式環境必須在雲端平台設定 DJANGO_SECRET_KEY；本機沒設定時使用開發用金鑰
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("正式環境請設定 DJANGO_SECRET_KEY 環境變數。")
+    SECRET_KEY = "django-insecure-local-dev-key-change-me"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
@@ -62,6 +65,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        # 交易一開始就取得寫入鎖，讓同時選課的請求排隊執行（Django 5.1 以上支援）
+        "OPTIONS": {"transaction_mode": "IMMEDIATE"},
     }
 }
 
@@ -81,7 +86,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Django 5.1 起已移除 STATICFILES_STORAGE，改用 STORAGES 設定
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -1,0 +1,40 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}系統設定｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in space-y-4">
+  <div class="flex flex-wrap justify-between items-center gap-3">
+    <h1 class="text-xl font-bold">加退選期間</h1>
+    <span class="text-sm px-3 py-1.5 rounded-full {% if status == 'open' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200{% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200{% endif %}">
+      {% if status == 'open' %}● 目前開放中{% elif status == 'not_started' %}⏸ 尚未開始{% else %}⏹ 已結束{% endif %}
+    </span>
+  </div>
+  <p class="text-sm text-slate-500 dark:text-slate-400">期間外學生只能瀏覽課程，不能加選、退選或登記候補。教師開課與管理員的操作不受影響。</p>
+  <form method="post" class="flex flex-wrap gap-3">
+    {% csrf_token %}
+    <button name="quick" value="open" class="btn-press px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm hover:opacity-90"
+            onclick="return confirm('確定要立即開放加退選，並清除開始與結束時間嗎？');">立即開放（不限時間）</button>
+    <button name="quick" value="close" class="btn-press px-4 py-2 rounded-xl bg-amber-500 text-white text-sm hover:opacity-90"
+            onclick="return confirm('確定要立即結束加退選嗎？');">立即結束加退選</button>
+  </form>
+</div>
+
+<form method="post" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 grid md:grid-cols-2 gap-5">
+  {% csrf_token %}
+  <h2 class="md:col-span-2 text-lg font-semibold">時間設定</h2>
+  {% for field in form %}
+  <div class="space-y-1">
+    <label for="{{ field.id_for_label }}" class="block text-sm text-slate-600 dark:text-slate-300">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="text-xs text-slate-500 dark:text-slate-400">{{ field.help_text }}</p>{% endif %}
+    {% for err in field.errors %}<p class="text-sm text-red-600 dark:text-red-300">{{ err }}</p>{% endfor %}
+  </div>
+  {% endfor %}
+  <p class="md:col-span-2 text-sm text-slate-500 dark:text-slate-400">
+    學生匯出行事曆時使用的學期日期：{{ semester_start|date:"Y-m-d" }} ～ {{ semester_end|date:"Y-m-d" }}
+    {% if not setting.semester_start or not setting.semester_end %}（未設定的部分自動推算）{% endif %}
+  </p>
+  <div class="md:col-span-2 flex flex-wrap gap-4 pt-4 border-t dark:border-slate-700">
+    <button type="submit" class="btn-press px-6 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">儲存設定</button>
+  </div>
+</form>
+{% endblock %}

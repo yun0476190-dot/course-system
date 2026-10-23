@@ -1,0 +1,16 @@
+{# 分頁列：保留目前的搜尋與篩選條件，只換頁碼 #}
+<nav aria-label="分頁" class="flex flex-wrap items-center justify-between gap-3 pt-4 text-sm">
+  <span class="text-slate-500 dark:text-slate-400">
+    共 {{ page.paginator.count }} 筆{% if page.paginator.num_pages > 1 %}，第 {{ page.number }} / {{ page.paginator.num_pages }} 頁{% endif %}
+  </span>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="flex gap-2">
+    {% if page.has_previous %}
+    <a href="{% querystring page=page.previous_page_number %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">上一頁</a>
+    {% endif %}
+    {% if page.has_next %}
+    <a href="{% querystring page=page.next_page_number %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">下一頁</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</nav>

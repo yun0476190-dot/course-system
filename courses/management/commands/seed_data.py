@@ -3,9 +3,16 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from courses.models import Course, StudentProfile, TeacherProfile
+from courses.models import Classroom, Course, StudentProfile, TeacherProfile
 
 User = get_user_model()
+
+# 教室與容納人數
+CLASSROOMS = [
+    ("E101", 80), ("E102", 60), ("運動場", 50),
+    ("B201", 60), ("B305", 50), ("B401", 40), ("B402", 40), ("B403", 35),
+    ("A101", 90), ("A102", 90), ("A201", 80), ("A202", 80), ("A203", 70),
+]
 
 COURSES = [
     # code, name, teacher_idx, credits, category, dept, weekday, start, end, room, capacity
@@ -25,14 +32,21 @@ COURSES = [
     ("GI4005", "天文學入門", 0, 2, "ge_elective", "通識中心", 3, 9, 10, "A203", 70),
 ]
 
+# 示範修課資格：機器學習限三、四年級，Linux 系統限資訊管理系
+RESTRICTIONS = {
+    "ME3002": {"allowed_grades": [3, 4]},
+    "ME3003": {"allowed_departments": ["資訊管理系"]},
+}
+
 
 class Command(BaseCommand):
-    help = "灌入假資料：管理員、學生、教師與課程"
+    help = "灌入假資料：管理員、學生、教師、教室與課程"
 
     @transaction.atomic
     def handle(self, *args, **options):
+        # 示範帳號每次都重設密碼，確保登入頁的展示按鈕永遠能登入
         # 管理員
-        admin, created = User.objects.get_or_create(
+        admin, _ = User.objects.get_or_create(
             username="admin",
             defaults={
                 "role": User.Role.ADMIN,
@@ -63,9 +77,9 @@ class Command(BaseCommand):
             teachers.append(user)
 
         # 學生
-        for i, (username, name) in enumerate([
-            ("student1", "陳同學"),
-            ("student2", "林同學"),
+        for i, (username, name, grade) in enumerate([
+            ("student1", "陳同學", 2),
+            ("student2", "林同學", 3),
         ], start=1):
             user, _ = User.objects.get_or_create(
                 username=username,
@@ -78,12 +92,20 @@ class Command(BaseCommand):
                 defaults={
                     "student_no": f"S{i:08d}",
                     "department": "資訊管理系",
+                    "grade": grade,
                 },
             )
 
-        # 課程
+        # 教室：已存在就保留管理員改過的容納人數
+        rooms = {}
+        for name, capacity in CLASSROOMS:
+            rooms[name], _ = Classroom.objects.get_or_create(
+                name=name, defaults={"capacity": capacity}
+            )
+
+        # 課程：只建立還不存在的課程，不覆寫教師或管理員改過的內容
         for (code, name, t_idx, credits, cat, dept, wd, sp, ep, room, cap) in COURSES:
-            Course.objects.update_or_create(
+            Course.objects.get_or_create(
                 code=code,
                 defaults={
                     "name": name,
@@ -94,12 +116,14 @@ class Command(BaseCommand):
                     "weekday": wd,
                     "start_period": sp,
                     "end_period": ep,
-                    "classroom": room,
+                    "classroom": rooms[room],
                     "capacity": cap,
+                    **RESTRICTIONS.get(code, {}),
                 },
             )
 
         self.stdout.write(self.style.SUCCESS(
-            f"假資料建立完成：管理員 1、教師 {len(teachers)}、學生 2、課程 {len(COURSES)}"
+            f"假資料建立完成：管理員 1、教師 {len(teachers)}、學生 2、"
+            f"教室 {len(CLASSROOMS)}、課程 {len(COURSES)}"
         ))
         self.stdout.write("帳號密碼：admin/admin123、teacher1/teacher123、teacher2/teacher123、student1/student123、student2/student123")

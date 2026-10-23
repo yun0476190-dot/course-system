@@ -2,14 +2,26 @@
 {% block title %}{{ course.name }}｜課程大綱{% endblock %}
 {% block content %}
 <div class="space-y-8">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in space-y-2">
+    {% if user.is_student %}
     <a href="{% url 'course_list' %}" class="text-blue-600 dark:text-blue-400 underline text-sm">← 返回課程列表</a>
-    <h1 class="text-2xl font-bold mt-2">[{{ course.code }}] {{ course.name }}</h1>
-    <p class="text-slate-500 dark:text-slate-400 mt-1">
-      {{ course.teacher.get_full_name|default:course.teacher.username }} ・ {{ course.get_category_display }} ・
-      {{ course.credits }} 學分 ・ {{ course.get_weekday_display }} 第 {{ course.start_period }}–{{ course.end_period }} 節 ・
-      {{ course.classroom }} ・ 已選 {{ enrolled_count }} / {{ course.capacity }} 人
+    {% elif user.is_teacher %}
+    <a href="{% url 'teacher_courses' %}" class="text-blue-600 dark:text-blue-400 underline text-sm">← 返回我的開課</a>
+    {% elif user.is_academic_admin %}
+    <a href="{% url 'admin_courses' %}" class="text-blue-600 dark:text-blue-400 underline text-sm">← 返回課程管理</a>
+    {% endif %}
+    <h1 class="text-2xl font-bold">[{{ course.code }}] {{ course.name }}</h1>
+    <p class="text-slate-500 dark:text-slate-400">
+      {{ course.teacher.display_name|default:course.teacher.username }} ・ {{ course.get_category_display }} ・
+      {{ course.credits }} 學分 ・ {{ course.time_label }} ・ {{ course.classroom.name }} ・
+      已選 {{ course.num_enrolled }} / {{ course.capacity }} 人{% if course.num_waiting %}・候補 {{ course.num_waiting }} 人{% endif %}
     </p>
+    {% if course.restriction_label %}
+    <p class="text-sm"><span class="text-slate-500 dark:text-slate-400">修課限制：</span>{{ course.restriction_label }}</p>
+    {% endif %}
+    {% if enrolled %}
+    <p class="text-sm text-emerald-700 dark:text-emerald-300">✔ 你已選這門課</p>
+    {% endif %}
   </div>
 
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">

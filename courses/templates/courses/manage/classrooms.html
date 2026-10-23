@@ -1,0 +1,55 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}教室管理｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-1">
+    <h1 class="text-xl font-bold">教室管理</h1>
+    <a href="{% url 'admin_classroom_create' %}" class="btn-press px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">＋ 新增教室</a>
+  </div>
+  <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">同一時段同一間教室只能排一門課，課程人數上限也不能超過教室的容納人數。</p>
+
+  <form method="get" class="flex flex-wrap items-center gap-3 mb-2">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜尋教室名稱"
+           class="flex-1 min-w-[12rem] border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+    <button class="btn-press px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:opacity-80">搜尋</button>
+    {% if q %}<a href="{% url 'admin_classrooms' %}" class="text-sm text-blue-600 dark:text-blue-400 underline">清除條件</a>{% endif %}
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+      <thead class="text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2 px-3 font-normal">教室</th>
+          <th class="py-2 px-3 font-normal">容納人數</th>
+          <th class="py-2 px-3 font-normal">排課數</th>
+          <th class="py-2 px-3 font-normal">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for room in page %}
+        <tr class="bg-slate-50 dark:bg-slate-700/50">
+          <td class="py-3 px-3 rounded-l-xl font-medium">{{ room.name }}</td>
+          <td class="py-3 px-3 tabular-nums">{{ room.capacity }} 人</td>
+          <td class="py-3 px-3 tabular-nums">{{ room.num_courses }}</td>
+          <td class="py-3 px-3 rounded-r-xl">
+            <div class="flex flex-wrap gap-2">
+              <a href="{% url 'admin_classroom_edit' room.id %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">編輯</a>
+              {% if not room.num_courses %}
+              <form method="post" action="{% url 'admin_classroom_delete' room.id %}"
+                    onsubmit="return confirm('確定要刪除教室「{{ room.name|escapejs }}」嗎？');">
+                {% csrf_token %}
+                <button type="submit" class="btn-press px-3 py-1 rounded-lg bg-rose-600 text-white hover:opacity-90">刪除</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="py-6 text-center text-slate-500">沒有符合條件的教室。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "courses/manage/_pagination.html" %}
+</div>
+{% endblock %}

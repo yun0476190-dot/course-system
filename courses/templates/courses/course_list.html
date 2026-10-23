@@ -9,16 +9,37 @@
       <span class="text-sm text-slate-500 dark:text-slate-400">共 {{ courses|length }} 門課</span>
     </div>
 
+    {# 加退選狀態與學分摘要；選課後會整塊重新載入 #}
+    <div id="enroll-summary" class="space-y-3">
+      {% if not window_open %}
+      <div class="rounded-xl p-3 text-sm bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+        ⏸ {{ closed_message }}目前只能瀏覽課程。
+      </div>
+      {% elif setting.enrollment_end %}
+      <div class="rounded-xl p-3 text-sm bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+        加退選開放中，{{ setting.enrollment_end|date:"Y-m-d H:i" }} 截止。
+      </div>
+      {% endif %}
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        <span>已選 <strong class="text-lg">{{ summary.total }}</strong> 學分</span>
+        <span class="text-slate-500 dark:text-slate-400">學分下限 {{ summary.min }}・上限 {{ summary.max }}</span>
+        {% if summary.below_min %}
+        <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">⚠️ 還差 {{ summary.missing }} 學分達到下限</span>
+        {% else %}
+        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">✔ 已達學分下限</span>
+        {% endif %}
+      </div>
+    </div>
+
     <div class="grid md:grid-cols-4 gap-4">
       <input id="search" type="text" placeholder="搜尋課名或課程代碼…"
              class="md:col-span-2 border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <select id="filter-category"
               class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
         <option value="">全部類別</option>
-        <option value="通識必修">通識必修</option>
-        <option value="專業必修">專業必修</option>
-        <option value="專業選修">專業選修</option>
-        <option value="通識興趣選修">通識興趣選修</option>
+        {% for value, label in categories %}
+        <option value="{{ label }}">{{ label }}</option>
+        {% endfor %}
       </select>
       <select id="filter-department"
               class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
@@ -50,7 +71,7 @@
         {% elif course.category == 'major_elective' %}bg-blue-500
         {% else %}bg-emerald-500{% endif %}"></span>
 
-      <div>
+      <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'course_detail' course.id %}" class="font-semibold hover:text-blue-600 hover:underline">[{{ course.code }}] {{ course.name }}</a>
           <span class="text-xs px-2 py-0.5 rounded-full text-white
@@ -60,19 +81,47 @@
             {% else %}bg-emerald-500{% endif %}">{{ course.get_category_display }}</span>
         </div>
         <div class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {{ course.teacher.get_full_name|default:course.teacher.username }} ・ {{ course.credits }} 學分 ・
-          {{ course.get_weekday_display }} 第 {{ course.start_period }}–{{ course.end_period }} 節 ・
-          {{ course.classroom }} ・ 上限 {{ course.capacity }} 人
+          {{ course.teacher.display_name|default:course.teacher.username }} ・ {{ course.credits }} 學分 ・
+          {{ course.time_label }} ・ {{ course.classroom.name }}
         </div>
+        <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          {% if course.remaining %}
+          <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">剩 {{ course.remaining }} 名</span>
+          {% else %}
+          <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">已額滿</span>
+          {% endif %}
+          <span class="text-slate-500 dark:text-slate-400">{{ course.num_enrolled }}/{{ course.capacity }} 人{% if course.num_waiting %}・候補 {{ course.num_waiting }} 人{% endif %}</span>
+          {% if course.restriction_label %}
+          <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">限 {{ course.restriction_label }}</span>
+          {% endif %}
+        </div>
+        {% if course.status == "enrolled" %}
+        <p class="mt-2 text-sm text-emerald-700 dark:text-emerald-300">✔ 已選</p>
+        {% elif course.status == "waiting" %}
+        <p class="mt-2 text-sm text-amber-700 dark:text-amber-300">⏳ 候補第 {{ course.position }} 位，有名額時會自動加選</p>
+        {% elif course.status == "blocked" %}
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">⛔ {{ course.block_reason }}</p>
+        {% endif %}
       </div>
 
-      <button
-        type="button"
-        data-course-id="{{ course.id }}"
-        data-action="{% if course.id in enrolled_ids %}drop{% else %}enroll{% endif %}"
-        class="action-btn btn-press px-4 py-2 rounded-xl text-white transition hover:opacity-90 {% if course.id in enrolled_ids %}bg-slate-500{% else %}bg-blue-600{% endif %}">
-        {% if course.id in enrolled_ids %}退選{% else %}加選{% endif %}
-      </button>
+      <div class="shrink-0">
+        {% if course.status == "enrolled" %}
+        <button type="button" data-url="{% url 'drop' course.id %}" {% if not window_open %}disabled{% endif %}
+                class="action-btn btn-press px-4 py-2 rounded-xl text-white bg-slate-500 transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">退選</button>
+        {% elif course.status == "waiting" %}
+        <button type="button" data-url="{% url 'waitlist_leave' course.id %}" {% if not window_open %}disabled{% endif %}
+                class="action-btn btn-press px-4 py-2 rounded-xl text-white bg-slate-500 transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">取消候補</button>
+        {% elif course.status == "open" %}
+        <button type="button" data-url="{% url 'enroll' course.id %}" {% if not window_open %}disabled{% endif %}
+                class="action-btn btn-press px-4 py-2 rounded-xl text-white bg-blue-600 transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">加選</button>
+        {% elif course.status == "full" %}
+        <button type="button" data-url="{% url 'waitlist_join' course.id %}" {% if not window_open %}disabled{% endif %}
+                class="action-btn btn-press px-4 py-2 rounded-xl text-white bg-amber-600 transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">登記候補</button>
+        {% else %}
+        <button type="button" disabled
+                class="px-4 py-2 rounded-xl bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 cursor-not-allowed">無法加選</button>
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -81,11 +130,9 @@
 
 <script>
   const csrftoken = "{{ csrf_token }}";
-
   const searchInput = document.getElementById("search");
   const categorySelect = document.getElementById("filter-category");
   const departmentSelect = document.getElementById("filter-department");
-  const cards = document.querySelectorAll(".course-card");
   const emptyHint = document.getElementById("empty-hint");
 
   function applyFilter() {
@@ -93,7 +140,7 @@
     const category = categorySelect.value;
     const department = departmentSelect.value;
     let visible = 0;
-    cards.forEach((card) => {
+    document.querySelectorAll(".course-card").forEach((card) => {
       const matchKeyword = !keyword
         || card.dataset.name.toLowerCase().includes(keyword)
         || card.dataset.code.toLowerCase().includes(keyword);
@@ -113,7 +160,9 @@
   function showToast(message, ok) {
     const area = document.getElementById("toast-area");
     const el = document.createElement("div");
-    el.className = "animate-pop-in rounded-xl p-3 shadow " + (ok ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700");
+    el.className = "animate-pop-in rounded-xl p-3 shadow " + (ok
+      ? "bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-100"
+      : "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-100");
     el.textContent = message;
     area.prepend(el);
     setTimeout(() => {
@@ -123,33 +172,45 @@
     }, 3500);
   }
 
-  document.querySelectorAll(".action-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const courseId = btn.dataset.courseId;
-      const action = btn.dataset.action;
-      const scrollY = window.scrollY;
-      btn.disabled = true;
-      try {
-        const res = await fetch(`/courses/${courseId}/${action}/`, {
-          method: "POST",
-          headers: { "X-CSRFToken": csrftoken, "X-Requested-With": "XMLHttpRequest" },
-        });
-        const data = await res.json();
-        showToast(data.message, data.ok);
-        if (data.ok) {
-          const isEnroll = action === "enroll";
-          btn.dataset.action = isEnroll ? "drop" : "enroll";
-          btn.textContent = isEnroll ? "退選" : "加選";
-          btn.classList.toggle("bg-blue-600", !isEnroll);
-          btn.classList.toggle("bg-slate-500", isEnroll);
-        }
-      } catch (err) {
-        showToast("網路錯誤，請稍後再試。", false);
-      } finally {
-        btn.disabled = false;
-        window.scrollTo(0, scrollY);
+  // 操作後重新取得課程清單，剩餘名額、衝堂提示與按鈕才會和伺服器一致
+  async function refreshList() {
+    const res = await fetch(window.location.pathname);
+    if (!res.ok) return;
+    const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+    for (const id of ["course-list", "enroll-summary"]) {
+      const fresh = doc.getElementById(id);
+      if (fresh) document.getElementById(id).replaceWith(fresh);
+    }
+    document.querySelectorAll(".course-card").forEach((card) => card.classList.remove("animate-fade-up"));
+    applyFilter();
+  }
+
+  // 用事件委派處理按鈕，清單重新載入後不需要重新綁定
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest(".action-btn");
+    if (!btn || btn.disabled) return;
+    const scrollY = window.scrollY;
+    btn.disabled = true;
+    try {
+      const res = await fetch(btn.dataset.url, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken, "X-Requested-With": "XMLHttpRequest" },
+      });
+      // 登入逾時或權限不足時，伺服器會轉址到 HTML 頁面而不是回傳 JSON
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        showToast("登入已逾時或沒有權限，請重新整理頁面。", false);
+        return;
       }
-    });
+      const data = await res.json();
+      showToast(data.message, data.ok);
+      await refreshList();
+    } catch (err) {
+      showToast("網路錯誤，請稍後再試。", false);
+    } finally {
+      btn.disabled = false;
+      window.scrollTo(0, scrollY);
+    }
   });
 </script>
 {% endblock %}

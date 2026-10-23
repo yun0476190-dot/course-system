@@ -1,0 +1,73 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}課程管理｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+    <h1 class="text-xl font-bold">課程管理</h1>
+    <a href="{% url 'admin_course_create' %}" class="btn-press px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">＋ 開設新課程</a>
+  </div>
+
+  <form method="get" class="flex flex-wrap items-center gap-3 mb-2">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜尋課程代碼、名稱、教師或教室"
+           class="flex-1 min-w-[12rem] border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+    <select name="category" aria-label="課程類別" class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+      <option value="">全部類別</option>
+      {% for value, label in categories %}
+      <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn-press px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:opacity-80">搜尋</button>
+    {% if q or category %}<a href="{% url 'admin_courses' %}" class="text-sm text-blue-600 dark:text-blue-400 underline">清除條件</a>{% endif %}
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+      <thead class="text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2 px-3 font-normal">課程</th>
+          <th class="py-2 px-3 font-normal">教師</th>
+          <th class="py-2 px-3 font-normal">時間・教室</th>
+          <th class="py-2 px-3 font-normal">學分</th>
+          <th class="py-2 px-3 font-normal">已選／上限</th>
+          <th class="py-2 px-3 font-normal">候補</th>
+          <th class="py-2 px-3 font-normal">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in page %}
+        <tr class="bg-slate-50 dark:bg-slate-700/50">
+          <td class="py-3 px-3 rounded-l-xl">
+            <a href="{% url 'course_detail' course.id %}" class="font-medium hover:underline">[{{ course.code }}] {{ course.name }}</a>
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+              {{ course.get_category_display }}{% if course.restriction_label %}・限 {{ course.restriction_label }}{% endif %}
+            </div>
+          </td>
+          <td class="py-3 px-3">{{ course.teacher.display_name|default:course.teacher.username }}</td>
+          <td class="py-3 px-3">{{ course.time_label }}<div class="text-xs text-slate-500 dark:text-slate-400">{{ course.classroom.name }}</div></td>
+          <td class="py-3 px-3 tabular-nums">{{ course.credits }}</td>
+          <td class="py-3 px-3 tabular-nums">
+            {{ course.num_enrolled }}／{{ course.capacity }}
+            {% if course.num_enrolled >= course.capacity %}<span class="ml-1 text-xs text-rose-700 dark:text-rose-300">額滿</span>{% endif %}
+          </td>
+          <td class="py-3 px-3 tabular-nums">{{ course.num_waiting }}</td>
+          <td class="py-3 px-3 rounded-r-xl">
+            <div class="flex flex-wrap gap-2">
+              <a href="{% url 'admin_course_edit' course.id %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">編輯</a>
+              <a href="{% url 'course_roster_csv' course.id %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">名單</a>
+              <form method="post" action="{% url 'admin_course_delete' course.id %}"
+                    onsubmit="return confirm('確定要刪除「{{ course.name|escapejs }}」嗎？此操作無法復原。');">
+                {% csrf_token %}
+                <button type="submit" class="btn-press px-3 py-1 rounded-lg bg-rose-600 text-white hover:opacity-90">刪除</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="py-6 text-center text-slate-500">沒有符合條件的課程。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "courses/manage/_pagination.html" %}
+</div>
+{% endblock %}

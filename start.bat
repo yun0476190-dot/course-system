@@ -10,7 +10,7 @@ if not exist venv\Scripts\python.exe (
 call venv\Scripts\activate
 
 echo [2/4] 安裝套件...
-python -m pip install -q "Django>=5.0,<6.0"
+python -m pip install -q -r requirements.txt
 
 echo [3/4] 建立資料庫並灌入假資料...
 python manage.py migrate -v 0

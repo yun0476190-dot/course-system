@@ -1,0 +1,71 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}教師管理｜選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+    <h1 class="text-xl font-bold">教師管理</h1>
+    <a href="{% url 'admin_teacher_create' %}" class="btn-press px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">＋ 新增教師</a>
+  </div>
+
+  <form method="get" class="flex flex-wrap items-center gap-3 mb-2">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜尋教師編號、帳號、姓名或系所"
+           class="flex-1 min-w-[12rem] border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+    <button class="btn-press px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:opacity-80">搜尋</button>
+    {% if q %}<a href="{% url 'admin_teachers' %}" class="text-sm text-blue-600 dark:text-blue-400 underline">清除條件</a>{% endif %}
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+      <thead class="text-slate-500 dark:text-slate-400">
+        <tr>
+          <th class="py-2 px-3 font-normal">教師編號</th>
+          <th class="py-2 px-3 font-normal">姓名／帳號</th>
+          <th class="py-2 px-3 font-normal">系所</th>
+          <th class="py-2 px-3 font-normal">開課數</th>
+          <th class="py-2 px-3 font-normal">狀態</th>
+          <th class="py-2 px-3 font-normal">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in page %}
+        <tr class="bg-slate-50 dark:bg-slate-700/50">
+          <td class="py-3 px-3 rounded-l-xl">{{ t.teacher_no }}</td>
+          <td class="py-3 px-3">
+            <div>{{ t.user.display_name|default:"—" }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">{{ t.user.username }}</div>
+          </td>
+          <td class="py-3 px-3">{{ t.department }}</td>
+          <td class="py-3 px-3 tabular-nums">{{ t.num_courses }}</td>
+          <td class="py-3 px-3">
+            {% if t.user.is_active %}
+            <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">啟用中</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded-full text-xs bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-200">已停用</span>
+            {% endif %}
+          </td>
+          <td class="py-3 px-3 rounded-r-xl">
+            <div class="flex flex-wrap gap-2">
+              <a href="{% url 'admin_teacher_edit' t.id %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">編輯</a>
+              <a href="{% url 'admin_reset_password' t.user.id %}" class="px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">重設密碼</a>
+              <form method="post" action="{% url 'admin_toggle_account' t.user.id %}"
+                    onsubmit="return confirm('{% if t.user.is_active %}確定要停用此教師帳號嗎？若該教師仍有開課，請先處理其課程。{% else %}確定要重新啟用此教師帳號嗎？{% endif %}');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                {% if t.user.is_active %}
+                <button class="btn-press px-3 py-1 rounded-lg bg-amber-500 text-white hover:opacity-90">停用</button>
+                {% else %}
+                <button class="btn-press px-3 py-1 rounded-lg bg-emerald-600 text-white hover:opacity-90">啟用</button>
+                {% endif %}
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-6 text-center text-slate-500">沒有符合條件的教師。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "courses/manage/_pagination.html" %}
+</div>
+{% endblock %}

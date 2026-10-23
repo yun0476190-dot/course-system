@@ -1,0 +1,37 @@
+{% extends "courses/manage/base.html" %}
+{% block title %}{% if profile %}編輯教師｜{% else %}新增教師｜{% endif %}選課系統{% endblock %}
+{% block manage_content %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in">
+  <h1 class="text-2xl font-bold">{% if profile %}編輯教師：{{ profile.user.display_name|default:profile.user.username }}{% else %}新增教師{% endif %}</h1>
+  <p class="text-slate-500 dark:text-slate-400 mt-1">
+    {% if profile %}帳號為 {{ profile.user.username }}。教師可以從右上角「修改密碼」自行變更密碼；忘記密碼時請到教師清單按「重設密碼」。{% else %}建立教師帳號與教師資料，初始密碼請告知教師。{% endif %}
+  </p>
+</div>
+
+<form method="post" class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 grid md:grid-cols-2 gap-5">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="md:col-span-2 rounded-xl p-3 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">
+    {{ form.non_field_errors|join:" " }}
+  </div>
+  {% endif %}
+  {% for field in form %}
+  <div class="space-y-1">
+    <label for="{{ field.id_for_label }}" class="block text-sm text-slate-600 dark:text-slate-300">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}
+    <p class="text-xs text-slate-500 dark:text-slate-400">{{ field.help_text }}</p>
+    {% endif %}
+    {% for err in field.errors %}
+    <p class="text-sm text-red-600 dark:text-red-300">{{ err }}</p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div class="md:col-span-2 flex flex-wrap gap-4 pt-4 mt-2 border-t dark:border-slate-700">
+    <button type="submit" class="btn-press px-6 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">
+      {% if profile %}儲存變更{% else %}建立教師{% endif %}
+    </button>
+    <a href="{% url 'admin_teachers' %}" class="px-6 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">取消</a>
+  </div>
+</form>
+{% endblock %}

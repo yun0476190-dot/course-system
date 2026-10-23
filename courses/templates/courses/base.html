@@ -42,10 +42,15 @@
                   radial-gradient(900px 500px at 110% 0%, #4c1d9555 0%, transparent 55%),
                   #0f172a;
     }
+    /* 列印（例如課表）時用白底，並保留課程色塊的顏色 */
+    @media print {
+      .gradient-bg { background: #fff !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body class="gradient-bg text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
-  <nav class="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-slate-900/70 border-b border-white/40 dark:border-slate-700/60">
+  <nav class="print:hidden sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-slate-900/70 border-b border-white/40 dark:border-slate-700/60">
     <div class="max-w-6xl mx-auto px-6 py-3 flex flex-wrap gap-4 justify-between items-center">
       <a href="{% url 'home' %}" class="text-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">🎓 選課系統</a>
       <div class="flex flex-wrap gap-3 items-center text-sm">
@@ -58,6 +63,7 @@
           {% elif user.role == 'admin' or user.is_superuser %}
             <a href="{% url 'admin_dashboard' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">管理面板</a>
           {% endif %}
+          <a href="{% url 'password_change' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">修改密碼</a>
           <form method="post" action="{% url 'logout' %}" class="inline">
             {% csrf_token %}
             <button type="submit" class="btn-press px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-700 hover:opacity-80 transition">登出</button>
@@ -76,7 +82,7 @@
 
   <main class="max-w-6xl mx-auto p-6 space-y-6">
     {% if messages %}
-    <div class="space-y-2">
+    <div class="space-y-2 print:hidden">
       {% for message in messages %}
       <div class="animate-fade-up rounded-xl p-3 shadow {% if message.tags == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200{% else %}bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200{% endif %}">
         {{ message }}
