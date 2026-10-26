@@ -75,7 +75,9 @@
           {# 每列固定高度由節次欄決定，跨節課程的色塊才能剛好填滿 #}
           <td class="h-16 p-1 text-center align-top text-slate-400">
             <div class="font-medium">{{ period.number }}</div>
-            <div class="text-[11px] leading-tight tabular-nums">{{ period.start|time:"H:i" }}</div>
+            {% if period.start %}
+            <div class="text-[11px] leading-tight tabular-nums">{{ period.start|time:"H:i" }}<br>{{ period.end|time:"H:i" }}</div>
+            {% endif %}
           </td>
           {% for day in weekdays %}
           {% with cell=grid|get_item:day|get_item:period.number %}

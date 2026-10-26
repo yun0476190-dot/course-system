@@ -547,6 +547,13 @@ class DisplayTests(BaseTestCase):
     def test_timetable_warns_below_minimum(self):
         self.assertContains(self.client.get(reverse("my_timetable")), "還差 16 學分")
 
+    def test_timetable_period_times(self):
+        response = self.client.get(reverse("my_timetable"))
+        self.assertContains(response, "13:30<br>14:20")
+        self.assertContains(response, "21:05<br>21:50")
+        # 第十節不顯示時間
+        self.assertNotContains(response, "18:05<br>18:30")
+
     def test_course_pages_show_teacher_display_name(self):
         course = make_course("C1", self.teacher)
         self.assertContains(self.client.get(reverse("course_list")), "王教授")
@@ -579,6 +586,16 @@ class ExportTests(BaseTestCase):
         self.assertIn("DTSTART;TZID=Asia/Taipei:20260916T091000", content)
         self.assertIn("DTEND;TZID=Asia/Taipei:20260916T110000", content)
         self.assertIn("RRULE:FREQ=WEEKLY;UNTIL=20270115T155959Z", content)
+
+    def test_timetable_calendar_evening_course(self):
+        SystemSetting.objects.create(pk=1, semester_start=date(2026, 9, 14), semester_end=date(2027, 1, 15))
+        evening = make_course("C2", self.teacher, weekday=1, start=10, end=11)
+        Enrollment.objects.create(student=self.student, course=evening)
+        self.client.force_login(self.student)
+        content = self.client.get(reverse("timetable_calendar")).content.decode("utf-8")
+        # 第十節沒有固定時間，從第九節下課的 18:05 開始算
+        self.assertIn("DTSTART;TZID=Asia/Taipei:20260914T180500", content)
+        self.assertIn("DTEND;TZID=Asia/Taipei:20260914T191500", content)
 
     def test_roster_csv_neutralises_formulas(self):
         self.student.display_name = "=HYPERLINK(\"http://evil.example\")"

@@ -131,6 +131,7 @@ def my_timetable(request):
     ]
     periods = [
         {"number": p, "start": services.period_start(p), "end": services.period_end(p)}
+        if p not in services.UNTIMED_PERIODS else {"number": p}
         for p in services.PERIODS
     ]
     return render(request, "courses/timetable.html", {

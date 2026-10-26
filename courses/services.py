@@ -7,17 +7,37 @@ from .models import (
 )
 
 
+# 每節的（上課時間, 下課時間）
+PERIOD_TIMES = {
+    1: (time(8, 10), time(9, 0)),
+    2: (time(9, 10), time(10, 0)),
+    3: (time(10, 10), time(11, 0)),
+    4: (time(11, 10), time(12, 0)),
+    5: (time(13, 30), time(14, 20)),
+    6: (time(14, 25), time(15, 15)),
+    7: (time(15, 25), time(16, 15)),
+    8: (time(16, 20), time(17, 10)),
+    9: (time(17, 15), time(18, 5)),
+    # 第十節沒有固定時間，用第九節下課到第十一節上課之間的空檔，只在匯出行事曆時用到
+    10: (time(18, 5), time(18, 30)),
+    11: (time(18, 30), time(19, 15)),
+    12: (time(19, 20), time(20, 5)),
+    13: (time(20, 15), time(21, 0)),
+    14: (time(21, 5), time(21, 50)),
+}
 PERIODS = range(1, 15)
+# 課表上不顯示時間的節次
+UNTIMED_PERIODS = {10}
 
 
 def period_start(period):
-    """第 n 節的上課時間：第 1 節 08:10，之後每節晚一小時。"""
-    return time(7 + period, 10)
+    """第 n 節的上課時間。"""
+    return PERIOD_TIMES[period][0]
 
 
 def period_end(period):
-    """第 n 節的下課時間（每節 50 分鐘）。"""
-    return time(8 + period, 0)
+    """第 n 節的下課時間。"""
+    return PERIOD_TIMES[period][1]
 
 
 def credit_limits(student):
