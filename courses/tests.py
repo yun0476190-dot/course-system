@@ -362,6 +362,45 @@ class CourseListTests(BaseTestCase):
     def test_below_minimum_hint(self):
         self.assertContains(self.client.get(reverse("course_list")), "還差 16 學分達到下限")
 
+    def test_mini_timetable_shows_enrolled_and_waiting_courses(self):
+        enrolled = make_course("C1", self.teacher, weekday=2, start=3, end=4)
+        full = make_course("C2", make_teacher("t2"), weekday=4, start=6, end=8,
+                           capacity=1, room=make_room("R2"))
+        make_course("C3", make_teacher("t3"), weekday=5, room=make_room("R3"))
+        Enrollment.objects.create(student=self.student, course=enrolled)
+        Enrollment.objects.create(student=make_student("s2"), course=full)
+        WaitlistEntry.objects.create(student=self.student, course=full)
+
+        response = self.client.get(reverse("course_list"))
+        self.assertEqual(
+            [(c.code, c.status) for c in response.context["mini_courses"]],
+            [("C1", "enrolled"), ("C2", "waiting")],
+        )
+        # 色塊放在對應的星期欄與節次列（第一欄是節次、第一列是星期）
+        self.assertContains(response, "grid-column: 3; grid-row: 4 / 6;")
+        self.assertContains(response, "grid-column: 5; grid-row: 7 / 10;")
+        self.assertContains(response, 'class="mini-block', count=2)
+
+    def test_mini_timetable_has_a_slot_for_every_period(self):
+        response = self.client.get(reverse("course_list"))
+        self.assertContains(response, 'class="mini-slot', count=5 * 14)
+        self.assertContains(response, 'data-day="5" data-period="14"')
+        # 第一節的上課時間放在節次的提示文字
+        self.assertContains(response, 'title="08:10–09:00"')
+
+    def test_weekday_and_period_filter_options(self):
+        response = self.client.get(reverse("course_list"))
+        self.assertContains(response, '<option value="5">週五</option>')
+        self.assertContains(response, "第 1 節（08:10–09:00）</option>")
+        # 第十節沒有固定時間，只顯示節次
+        self.assertContains(response, "第 10 節</option>")
+
+    def test_course_cards_carry_time_for_preview(self):
+        make_course("C1", self.teacher, weekday=3, start=2, end=4)
+        response = self.client.get(reverse("course_list"))
+        for attr in ['data-weekday="3"', 'data-start="2"', 'data-end="4"', 'data-status="open"']:
+            self.assertContains(response, attr, count=1)
+
 
 class PermissionTests(BaseTestCase):
     def setUp(self):

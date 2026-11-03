@@ -31,9 +31,9 @@
       </div>
     </div>
 
-    <div class="grid md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <input id="search" type="text" placeholder="搜尋課名或課程代碼…"
-             class="md:col-span-2 border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+             class="col-span-2 border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <select id="filter-category"
               class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
         <option value="">全部類別</option>
@@ -49,6 +49,24 @@
         {% if group.grouper %}<option value="{{ group.grouper }}">{{ group.grouper }}</option>{% endif %}
         {% endfor %}
       </select>
+      {# 星期與節次：點小課表的空格也會自動帶入 #}
+      <select id="filter-weekday" aria-label="星期"
+              class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+        <option value="">全部星期</option>
+        {% for day, label in weekday_labels %}
+        <option value="{{ day }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select id="filter-period" aria-label="節次"
+              class="border dark:border-slate-600 dark:bg-slate-700 rounded-xl px-3 py-2">
+        <option value="">全部節次</option>
+        {% for period in periods %}
+        <option value="{{ period.number }}">第 {{ period.number }} 節{% if period.start %}（{{ period.start|time:"H:i" }}–{{ period.end|time:"H:i" }}）{% endif %}</option>
+        {% endfor %}
+      </select>
+      <div id="filter-clear-row" class="hidden col-span-2 flex items-center">
+        <button type="button" id="filter-clear" class="text-sm text-blue-600 dark:text-blue-400 underline">清除全部篩選</button>
+      </div>
     </div>
 
     <p id="empty-hint" class="hidden text-slate-500">沒有符合條件的課程。</p>
@@ -56,7 +74,9 @@
 
   <div id="toast-area" class="fixed top-24 right-4 z-50 space-y-2 w-80"></div>
 
-  <div id="course-list" class="grid md:grid-cols-2 gap-5">
+  <div class="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+
+  <div id="course-list" class="grid md:grid-cols-2 lg:grid-cols-1 gap-5">
     {% for course in courses %}
     <div id="course-{{ course.id }}"
          class="course-card scroll-mt-28 animate-fade-up card-hover relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow p-5 pl-7 flex flex-wrap gap-4 justify-between items-center"
@@ -64,6 +84,10 @@
          data-code="{{ course.code }}"
          data-category="{{ course.get_category_display }}"
          data-department="{{ course.department }}"
+         data-weekday="{{ course.weekday }}"
+         data-start="{{ course.start_period }}"
+         data-end="{{ course.end_period }}"
+         data-status="{{ course.status }}"
          style="animation-delay: {{ forloop.counter0 }}0ms;">
       <span class="absolute left-0 top-0 bottom-0 w-2
         {% if course.category == 'ge_required' %}bg-amber-400
@@ -126,6 +150,59 @@
     {% endfor %}
   </div>
 
+  {# 小課表：已選與候補中的課程；手機上顯示在課程清單上方，電腦上固定在右側 #}
+  <aside id="mini-timetable" aria-labelledby="mini-title"
+         class="order-first lg:order-none lg:sticky lg:top-20 bg-white dark:bg-slate-800 rounded-2xl shadow p-4 space-y-3">
+    <div class="flex justify-between items-baseline">
+      <h2 id="mini-title" class="font-semibold">小課表</h2>
+      <a href="{% url 'my_timetable' %}" class="text-xs text-blue-600 dark:text-blue-400 underline">完整課表</a>
+    </div>
+
+    <div id="mini-grid" class="grid gap-px text-[11px]"
+         style="grid-template-columns: 1.5rem repeat({{ weekday_labels|length }}, minmax(0, 1fr)); grid-template-rows: 1.25rem repeat({{ periods|length }}, 1.375rem);">
+      {% for day, label in weekday_labels %}
+      <div class="text-center text-slate-500 dark:text-slate-400" style="grid-row: 1; grid-column: {{ day|add:1 }};">{{ label|slice:"1:" }}</div>
+      {% endfor %}
+
+      {% for period in periods %}
+      <div class="text-center leading-[1.375rem] tabular-nums text-slate-400"
+           style="grid-row: {{ period.number|add:1 }}; grid-column: 1;"
+           {% if period.start %}title="{{ period.start|time:'H:i' }}–{{ period.end|time:'H:i' }}"{% endif %}>{{ period.number }}</div>
+      {% for day, label in weekday_labels %}
+      <button type="button"
+              class="mini-slot rounded-sm bg-slate-100 dark:bg-slate-700/50 hover:bg-blue-100 dark:hover:bg-slate-600"
+              data-day="{{ day }}" data-period="{{ period.number }}"
+              style="grid-row: {{ period.number|add:1 }}; grid-column: {{ day|add:1 }};"
+              aria-label="{{ label }}第 {{ period.number }} 節：只顯示這個時段的課程"></button>
+      {% endfor %}
+      {% endfor %}
+
+      {% for course in mini_courses %}
+      <a href="#course-{{ course.id }}"
+         class="mini-block z-10 overflow-hidden rounded px-0.5 py-0.5 leading-tight
+                {% if course.status == 'enrolled' %}bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-sm
+                {% else %}border border-dashed border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200{% endif %}"
+         data-day="{{ course.weekday }}" data-start="{{ course.start_period }}" data-end="{{ course.end_period }}"
+         data-status="{{ course.status }}"
+         style="grid-column: {{ course.weekday|add:1 }}; grid-row: {{ course.start_period|add:1 }} / {{ course.end_period|add:2 }};"
+         title="[{{ course.code }}] {{ course.name }}・{{ course.time_label }}{% if course.status == 'waiting' %}・候補第 {{ course.position }} 位{% endif %}">{{ course.name }}</a>
+      {% endfor %}
+
+      {# 滑鼠移到課程卡片上時，預覽該課程的時段 #}
+      <div id="mini-preview" class="hidden"></div>
+    </div>
+
+    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+      <span><span class="inline-block w-3 h-3 align-[-2px] rounded-sm bg-gradient-to-br from-blue-500 to-violet-500"></span> 已選</span>
+      <span><span class="inline-block w-3 h-3 align-[-2px] rounded-sm border border-dashed border-amber-500 bg-amber-50 dark:bg-amber-900/40"></span> 候補中</span>
+      <span><span class="inline-block w-3 h-3 align-[-2px] rounded-sm bg-emerald-400/50 ring-1 ring-emerald-500"></span> 空堂可選</span>
+      <span><span class="inline-block w-3 h-3 align-[-2px] rounded-sm bg-rose-500/80 ring-1 ring-rose-600"></span> 衝堂</span>
+    </div>
+    <p class="text-xs text-slate-500 dark:text-slate-400">把滑鼠移到課程上可以預覽時段；點空格只看那個時段的課。</p>
+  </aside>
+
+  </div>
+
 </div>
 
 <script>
@@ -133,12 +210,18 @@
   const searchInput = document.getElementById("search");
   const categorySelect = document.getElementById("filter-category");
   const departmentSelect = document.getElementById("filter-department");
+  const weekdaySelect = document.getElementById("filter-weekday");
+  const periodSelect = document.getElementById("filter-period");
+  const clearButton = document.getElementById("filter-clear");
+  const filterInputs = [searchInput, categorySelect, departmentSelect, weekdaySelect, periodSelect];
   const emptyHint = document.getElementById("empty-hint");
 
   function applyFilter() {
     const keyword = searchInput.value.trim().toLowerCase();
     const category = categorySelect.value;
     const department = departmentSelect.value;
+    const weekday = weekdaySelect.value;
+    const period = Number(periodSelect.value);
     let visible = 0;
     document.querySelectorAll(".course-card").forEach((card) => {
       const matchKeyword = !keyword
@@ -146,16 +229,121 @@
         || card.dataset.code.toLowerCase().includes(keyword);
       const matchCategory = !category || card.dataset.category === category;
       const matchDept = !department || card.dataset.department === department;
-      const show = matchKeyword && matchCategory && matchDept;
+      const matchWeekday = !weekday || card.dataset.weekday === weekday;
+      // 跨多節的課，只要其中一節是所選節次就符合
+      const matchPeriod = !period
+        || (Number(card.dataset.start) <= period && period <= Number(card.dataset.end));
+      const show = matchKeyword && matchCategory && matchDept && matchWeekday && matchPeriod;
       card.classList.toggle("hidden", !show);
       if (show) visible++;
     });
     emptyHint.classList.toggle("hidden", visible > 0);
+    document.getElementById("filter-clear-row")
+      .classList.toggle("hidden", filterInputs.every((el) => !el.value.trim()));
+    markSelectedSlots();
+  }
+
+  function clearFilters() {
+    filterInputs.forEach((el) => { el.value = ""; });
+    applyFilter();
   }
 
   searchInput.addEventListener("input", applyFilter);
-  categorySelect.addEventListener("change", applyFilter);
-  departmentSelect.addEventListener("change", applyFilter);
+  [categorySelect, departmentSelect, weekdaySelect, periodSelect].forEach((el) =>
+    el.addEventListener("change", applyFilter));
+  clearButton.addEventListener("click", clearFilters);
+
+  // ---------- 小課表 ----------
+
+  const MATCHED_SLOT = ["!bg-blue-200", "dark:!bg-blue-800/70"];
+  const SELECTED_SLOT = ["ring-2", "ring-blue-500"];
+
+  // 在小課表上標出篩選的時段：只選星期標整欄、只選節次標整列、兩個都選標單一格
+  function markSelectedSlots() {
+    const day = Number(weekdaySelect.value);
+    const period = Number(periodSelect.value);
+    document.querySelectorAll(".mini-slot").forEach((slot) => {
+      const matched = Boolean(day || period)
+        && (!day || Number(slot.dataset.day) === day)
+        && (!period || Number(slot.dataset.period) === period);
+      const selected = Boolean(day && period) && matched;
+      MATCHED_SLOT.forEach((cls) => slot.classList.toggle(cls, matched));
+      SELECTED_SLOT.forEach((cls) => slot.classList.toggle(cls, selected));
+      slot.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  const PREVIEW_STYLES = {
+    free: "bg-emerald-400/50 ring-2 ring-emerald-500 text-emerald-900 dark:text-emerald-50",
+    clash: "bg-rose-500/80 ring-2 ring-rose-600 text-white",
+    self: "ring-2 ring-offset-1 ring-blue-400 dark:ring-offset-slate-800",
+    waiting: "ring-2 ring-offset-1 ring-amber-400 dark:ring-offset-slate-800",
+  };
+  let previewCard = null;
+
+  // 在小課表上預覽一門課的時段：空堂顯示綠色，和已選課程重疊顯示紅色
+  function showPreview(card) {
+    const preview = document.getElementById("mini-preview");
+    const day = Number(card.dataset.weekday);
+    const start = Number(card.dataset.start);
+    const end = Number(card.dataset.end);
+    let kind = card.dataset.status === "enrolled" ? "self"
+      : card.dataset.status === "waiting" ? "waiting" : "free";
+    if (kind === "free") {
+      const clash = [...document.querySelectorAll('.mini-block[data-status="enrolled"]')].some((block) =>
+        Number(block.dataset.day) === day
+        && Number(block.dataset.start) <= end && start <= Number(block.dataset.end));
+      if (clash) kind = "clash";
+    }
+    preview.className = "pointer-events-none z-20 overflow-hidden rounded px-0.5 py-0.5 leading-tight font-semibold "
+      + PREVIEW_STYLES[kind];
+    preview.style.gridColumn = String(day + 1);
+    preview.style.gridRow = `${start + 1} / ${end + 2}`;
+    preview.textContent = kind === "clash" ? "衝堂" : kind === "free" ? card.dataset.name : "";
+    previewCard = card;
+  }
+
+  function hidePreview() {
+    document.getElementById("mini-preview").className = "hidden";
+    previewCard = null;
+  }
+
+  document.addEventListener("mouseover", (event) => {
+    const card = event.target.closest(".course-card");
+    if (card === previewCard) return;
+    if (card) showPreview(card);
+    else hidePreview();
+  });
+  document.addEventListener("focusin", (event) => {
+    const card = event.target.closest(".course-card");
+    if (card && card !== previewCard) showPreview(card);
+  });
+  document.addEventListener("focusout", (event) => {
+    if (previewCard && !previewCard.contains(event.relatedTarget)) hidePreview();
+  });
+
+  document.addEventListener("click", (event) => {
+    // 點空格：帶入該格的星期與節次篩選，再點一次取消
+    const slot = event.target.closest(".mini-slot");
+    if (slot) {
+      const same = weekdaySelect.value === slot.dataset.day && periodSelect.value === slot.dataset.period;
+      weekdaySelect.value = same ? "" : slot.dataset.day;
+      periodSelect.value = same ? "" : slot.dataset.period;
+      applyFilter();
+      return;
+    }
+    // 點課程色塊：捲到該課程卡片；卡片被篩選藏起來時先清除篩選
+    const block = event.target.closest(".mini-block");
+    if (block) {
+      const card = document.querySelector(block.getAttribute("href"));
+      if (!card) return;
+      event.preventDefault();
+      if (card.classList.contains("hidden")) clearFilters();
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("ring-4", "ring-blue-400");
+      setTimeout(() => card.classList.remove("ring-4", "ring-blue-400"), 1500);
+    }
+  });
 
   function showToast(message, ok) {
     const area = document.getElementById("toast-area");
@@ -177,12 +365,17 @@
     const res = await fetch(window.location.pathname);
     if (!res.ok) return;
     const doc = new DOMParser().parseFromString(await res.text(), "text/html");
-    for (const id of ["course-list", "enroll-summary"]) {
+    const hoveredId = previewCard && previewCard.id;
+    for (const id of ["course-list", "enroll-summary", "mini-timetable"]) {
       const fresh = doc.getElementById(id);
       if (fresh) document.getElementById(id).replaceWith(fresh);
     }
     document.querySelectorAll(".course-card").forEach((card) => card.classList.remove("animate-fade-up"));
     applyFilter();
+    // 剛按下按鈕的卡片還在滑鼠下方時，立刻顯示它在新課表上的位置
+    previewCard = null;
+    const hovered = hoveredId && document.getElementById(hoveredId);
+    if (hovered && hovered.matches(":hover")) showPreview(hovered);
   }
 
   // 用事件委派處理按鈕，清單重新載入後不需要重新綁定

@@ -43,6 +43,15 @@ def _course_list_url(user):
     return "admin_courses" if is_admin(user) else "teacher_courses"
 
 
+def _period_rows():
+    """課表每一列的節次與上下課時間；第十節沒有固定時間，不顯示。"""
+    return [
+        {"number": p, "start": services.period_start(p), "end": services.period_end(p)}
+        if p not in services.UNTIMED_PERIODS else {"number": p}
+        for p in services.PERIODS
+    ]
+
+
 # ---------- 登入與密碼 ----------
 
 def login_view(request):
@@ -129,11 +138,6 @@ def my_timetable(request):
         {"entry": entry, "position": entry.position}
         for entry in student.waitlist_entries.select_related("course")
     ]
-    periods = [
-        {"number": p, "start": services.period_start(p), "end": services.period_end(p)}
-        if p not in services.UNTIMED_PERIODS else {"number": p}
-        for p in services.PERIODS
-    ]
     return render(request, "courses/timetable.html", {
         "enrollments": enrollments,
         "summary": services.credit_summary(student, courses),
@@ -143,7 +147,7 @@ def my_timetable(request):
         "waitlist": waitlist,
         "weekdays": [day for day, _ in WEEKDAYS],
         "weekday_labels": WEEKDAYS,
-        "periods": periods,
+        "periods": _period_rows(),
     })
 
 
@@ -191,6 +195,10 @@ def course_list(request):
 
     return render(request, "courses/course_list.html", {
         "courses": courses,
+        # 選課頁旁的小課表：已選與候補中的課程
+        "mini_courses": [c for c in courses if c.status in ("enrolled", "waiting")],
+        "weekday_labels": WEEKDAYS,
+        "periods": _period_rows(),
         "summary": services.credit_summary(student, current),
         "window_open": setting.enrollment_open,
         "closed_message": setting.closed_message(),
