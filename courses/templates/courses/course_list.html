@@ -72,7 +72,8 @@
     <p id="empty-hint" class="hidden text-slate-500">沒有符合條件的課程。</p>
   </div>
 
-  <div id="toast-area" class="fixed top-24 right-4 z-50 space-y-2 w-80"></div>
+  {# 提示訊息放在右下角，才不會蓋住右上方的小課表 #}
+  <div id="toast-area" class="fixed bottom-4 right-4 z-50 space-y-2 w-80 max-w-[calc(100vw-2rem)]"></div>
 
   <div class="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
 
@@ -352,7 +353,7 @@
       ? "bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-100"
       : "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-100");
     el.textContent = message;
-    area.prepend(el);
+    area.append(el);
     setTimeout(() => {
       el.style.transition = "opacity .3s";
       el.style.opacity = "0";
