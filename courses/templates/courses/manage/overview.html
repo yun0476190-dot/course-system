@@ -27,17 +27,10 @@
 
   <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
     {% for kpi in kpis %}
-    {% if kpi.url %}
     <a href="{{ kpi.url }}" class="card-hover block rounded-2xl bg-white dark:bg-slate-800 shadow p-4">
       <div class="text-sm text-slate-500 dark:text-slate-400">{{ kpi.label }}</div>
       <div class="mt-1 text-3xl font-semibold">{{ kpi.value }}</div>
     </a>
-    {% else %}
-    <div class="rounded-2xl bg-white dark:bg-slate-800 shadow p-4">
-      <div class="text-sm text-slate-500 dark:text-slate-400">{{ kpi.label }}</div>
-      <div class="mt-1 text-3xl font-semibold">{{ kpi.value }}</div>
-    </div>
-    {% endif %}
     {% endfor %}
   </div>
 
@@ -180,7 +173,7 @@
   </div>
 
   <div class="grid lg:grid-cols-2 gap-6">
-    <section class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
+    <section id="waitlist" class="scroll-mt-24 bg-white dark:bg-slate-800 rounded-2xl shadow p-6">
       <h2 class="text-lg font-semibold mb-4">候補人數最多的課程</h2>
       {% if busiest %}
       <table class="w-full text-left text-sm">

@@ -138,7 +138,8 @@ def admin_dashboard(request):
         },
         {"label": "開課數", "value": len(courses), "url": reverse("admin_courses")},
         {"label": "選課人次", "value": Enrollment.objects.count(), "url": reverse("admin_enrollments")},
-        {"label": "候補人次", "value": WaitlistEntry.objects.count(), "url": ""},
+        # 候補沒有獨立的管理頁，點了捲到本頁的「候補人數最多的課程」
+        {"label": "候補人次", "value": WaitlistEntry.objects.count(), "url": "#waitlist"},
         {
             "label": "未達學分下限",
             "value": len(below_min),

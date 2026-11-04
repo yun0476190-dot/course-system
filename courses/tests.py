@@ -823,6 +823,13 @@ class AdminListTests(BaseTestCase):
         self.assertEqual(kpis["未達學分下限"], 1)
         self.assertContains(response, "各課程選課率")
 
+    def test_every_overview_card_is_a_link(self):
+        """每個統計框都能點；候補人次捲到本頁的候補表格。"""
+        response = self.client.get(reverse("admin_dashboard"))
+        self.assertTrue(all(kpi["url"] for kpi in response.context["kpis"]))
+        self.assertContains(response, 'href="#waitlist" class="card-hover')
+        self.assertContains(response, 'id="waitlist"')
+
 
 class ClassroomTests(BaseTestCase):
     def setUp(self):
