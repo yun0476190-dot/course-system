@@ -60,6 +60,7 @@
             <a href="{% url 'my_timetable' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">我的課表</a>
           {% elif user.role == 'teacher' %}
             <a href="{% url 'teacher_courses' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">我的開課</a>
+            <a href="{% url 'teacher_timetable' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">我的課表</a>
           {% elif user.role == 'admin' or user.is_superuser %}
             <a href="{% url 'admin_dashboard' %}" class="px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition">管理面板</a>
           {% endif %}

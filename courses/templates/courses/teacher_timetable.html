@@ -1,0 +1,38 @@
+{% extends "courses/base.html" %}
+{% block title %}我的課表｜選課系統{% endblock %}
+{% block content %}
+<div class="space-y-8">
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 animate-pop-in space-y-3 print:shadow-none">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <h1 class="text-2xl font-bold">我的課表</h1>
+      <div class="flex flex-wrap items-center gap-2 text-sm print:hidden">
+        <a href="{% url 'course_create' %}" class="btn-press px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:opacity-90">＋ 開設新課程</a>
+        <button type="button" onclick="window.print()" class="btn-press px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:opacity-80">🖨 列印課表</button>
+        <a href="{% url 'teacher_courses' %}" class="px-2 text-blue-600 dark:text-blue-400 underline">返回我的開課</a>
+      </div>
+    </div>
+    <p class="text-slate-500 dark:text-slate-400">
+      本學期開授 <span class="font-semibold text-slate-800 dark:text-slate-100">{{ courses|length }}</span> 門課，
+      每週上課 <span class="font-semibold text-slate-800 dark:text-slate-100">{{ weekly_periods }}</span> 節。
+      點課名可以查看修課名單。
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 overflow-x-auto print:shadow-none">
+    <h2 class="text-lg font-semibold mb-4">週課表</h2>
+    {% if overlaps %}
+    <div class="mb-4 rounded-xl p-3 text-sm bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+      以下課程與您其他課程的時段重疊，未顯示在週課表中，請修改上課時間：
+      {% for course in overlaps %}<a href="{% url 'course_edit' course.id %}" class="underline">[{{ course.code }}] {{ course.name }}</a>{% if not forloop.last %}、{% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if courses %}
+    {% include "courses/_week_table.html" %}
+    {% else %}
+    <p class="text-slate-500 dark:text-slate-400">目前沒有開授的課程。</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

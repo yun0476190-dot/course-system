@@ -473,6 +473,52 @@ class CourseCreateTests(BaseTestCase):
         self.assertEqual(Course.objects.get(code="NEW001").teacher, teacher)
 
 
+class TeacherTimetableTests(BaseTestCase):
+    def setUp(self):
+        self.teacher = make_teacher("t1", "王教授")
+        self.other = make_teacher("t2", "李教授")
+        self.mine = make_course("C1", self.teacher, weekday=2, start=3, end=5, capacity=40)
+        self.theirs = make_course("C2", self.other, weekday=4, start=1, end=2)
+
+    def test_shows_only_own_courses_with_counts(self):
+        Enrollment.objects.create(student=make_student("s1"), course=self.mine)
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("teacher_timetable"))
+        self.assertContains(response, 'rowspan="3"', count=1)
+        self.assertContains(response, "1/40 人")
+        self.assertContains(response, reverse("teacher_course_detail", args=[self.mine.pk]))
+        self.assertNotContains(response, self.theirs.name)
+        self.assertEqual(response.context["weekly_periods"], 3)
+
+    def test_teacher_nav_links_to_timetable(self):
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("teacher_courses"))
+        self.assertContains(response, f'href="{reverse("teacher_timetable")}"')
+
+    def test_students_cannot_open_it(self):
+        self.client.force_login(make_student("s1"))
+        self.assertRedirects(
+            self.client.get(reverse("teacher_timetable")), reverse("home"), fetch_redirect_response=False,
+        )
+
+    def test_course_form_lists_only_own_courses_for_teacher(self):
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("course_create"))
+        schedules = response.context["schedules"]
+        self.assertEqual(list(schedules), [str(self.teacher.pk)])
+        self.assertEqual(schedules[str(self.teacher.pk)][0]["start"], 3)
+        self.assertEqual(response.context["own_teacher_id"], str(self.teacher.pk))
+        self.assertContains(response, 'id="teacher-schedules"')
+
+    def test_course_form_for_admin_has_every_teacher_except_edited_course(self):
+        self.client.force_login(make_admin())
+        response = self.client.get(reverse("admin_course_edit", args=[self.mine.pk]))
+        schedules = response.context["schedules"]
+        self.assertNotIn(str(self.teacher.pk), schedules)  # 唯一的課就是正在編輯的這門
+        self.assertEqual(schedules[str(self.other.pk)][0]["time"], self.theirs.time_label)
+        self.assertEqual(response.context["own_teacher_id"], "")
+
+
 class CourseFormTests(BaseTestCase):
     def setUp(self):
         self.teacher = make_teacher("t1")

@@ -1,0 +1,18 @@
+{# 小課表的格線：星期標題、節次與每個空格。放在 grid 容器裡使用，課程色塊由各頁面另外放入。 #}
+{# slot_hint：點空格會做什麼，給螢幕閱讀器使用 #}
+{% for day, label in weekday_labels %}
+<div class="text-center text-slate-500 dark:text-slate-400" style="grid-row: 1; grid-column: {{ day|add:1 }};">{{ label|slice:"1:" }}</div>
+{% endfor %}
+
+{% for period in periods %}
+<div class="text-center leading-[1.375rem] tabular-nums text-slate-400"
+     style="grid-row: {{ period.number|add:1 }}; grid-column: 1;"
+     {% if period.start %}title="{{ period.start|time:'H:i' }}–{{ period.end|time:'H:i' }}"{% endif %}>{{ period.number }}</div>
+{% for day, label in weekday_labels %}
+<button type="button"
+        class="mini-slot rounded-sm bg-slate-100 dark:bg-slate-700/50 hover:bg-blue-100 dark:hover:bg-slate-600"
+        data-day="{{ day }}" data-period="{{ period.number }}"
+        style="grid-row: {{ period.number|add:1 }}; grid-column: {{ day|add:1 }};"
+        aria-label="{{ label }}第 {{ period.number }} 節：{{ slot_hint }}"></button>
+{% endfor %}
+{% endfor %}

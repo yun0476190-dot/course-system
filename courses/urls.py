@@ -19,6 +19,7 @@ urlpatterns = [
 
     # 教師（開課、編輯、刪除與名單匯出也開放給管理員）
     path("teacher/", views.teacher_courses, name="teacher_courses"),
+    path("teacher/timetable/", views.teacher_timetable, name="teacher_timetable"),
     path("teacher/courses/<int:course_id>/", views.teacher_course_detail, name="teacher_course_detail"),
     path("teacher/courses/<int:course_id>/roster.csv", views.course_roster_csv, name="course_roster_csv"),
     path("teacher/courses/new/", views.course_create, name="course_create"),

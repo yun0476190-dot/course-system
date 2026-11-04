@@ -72,8 +72,9 @@
     <p id="empty-hint" class="hidden text-slate-500">沒有符合條件的課程。</p>
   </div>
 
-  {# 提示訊息放在右下角，才不會蓋住右上方的小課表 #}
-  <div id="toast-area" class="fixed bottom-4 right-4 z-50 space-y-2 w-80 max-w-[calc(100vw-2rem)]"></div>
+  {# 提示訊息放在畫面上方中間，選課時一眼就看得到，也不會蓋住右側的小課表 #}
+  <div id="toast-area" role="status" aria-live="polite"
+       class="pointer-events-none fixed top-20 left-1/2 -translate-x-1/2 z-50 space-y-2 w-80 max-w-[calc(100vw-2rem)]"></div>
 
   <div class="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
 
@@ -161,22 +162,7 @@
 
     <div id="mini-grid" class="grid gap-px text-[11px]"
          style="grid-template-columns: 1.5rem repeat({{ weekday_labels|length }}, minmax(0, 1fr)); grid-template-rows: 1.25rem repeat({{ periods|length }}, 1.375rem);">
-      {% for day, label in weekday_labels %}
-      <div class="text-center text-slate-500 dark:text-slate-400" style="grid-row: 1; grid-column: {{ day|add:1 }};">{{ label|slice:"1:" }}</div>
-      {% endfor %}
-
-      {% for period in periods %}
-      <div class="text-center leading-[1.375rem] tabular-nums text-slate-400"
-           style="grid-row: {{ period.number|add:1 }}; grid-column: 1;"
-           {% if period.start %}title="{{ period.start|time:'H:i' }}–{{ period.end|time:'H:i' }}"{% endif %}>{{ period.number }}</div>
-      {% for day, label in weekday_labels %}
-      <button type="button"
-              class="mini-slot rounded-sm bg-slate-100 dark:bg-slate-700/50 hover:bg-blue-100 dark:hover:bg-slate-600"
-              data-day="{{ day }}" data-period="{{ period.number }}"
-              style="grid-row: {{ period.number|add:1 }}; grid-column: {{ day|add:1 }};"
-              aria-label="{{ label }}第 {{ period.number }} 節：只顯示這個時段的課程"></button>
-      {% endfor %}
-      {% endfor %}
+      {% include "courses/_mini_grid_cells.html" with slot_hint="只顯示這個時段的課程" %}
 
       {% for course in mini_courses %}
       <a href="#course-{{ course.id }}"
@@ -276,7 +262,8 @@
 
   const PREVIEW_STYLES = {
     free: "bg-emerald-400/50 ring-2 ring-emerald-500 text-emerald-900 dark:text-emerald-50",
-    clash: "bg-rose-500/80 ring-2 ring-rose-600 text-white",
+    // 衝堂時蓋在已選的課上面，用不透明的底色，底下的課名才不會透出來
+    clash: "bg-rose-500 ring-2 ring-rose-600 text-white",
     self: "ring-2 ring-offset-1 ring-blue-400 dark:ring-offset-slate-800",
     waiting: "ring-2 ring-offset-1 ring-amber-400 dark:ring-offset-slate-800",
   };
@@ -349,16 +336,17 @@
   function showToast(message, ok) {
     const area = document.getElementById("toast-area");
     const el = document.createElement("div");
-    el.className = "animate-pop-in rounded-xl p-3 shadow " + (ok
-      ? "bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-100"
-      : "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-100");
-    el.textContent = message;
+    el.className = "animate-pop-in rounded-xl px-4 py-3 shadow-lg font-medium " + (ok
+      ? "bg-green-100 text-green-800 ring-1 ring-green-300 dark:bg-green-900/90 dark:text-green-100 dark:ring-green-700"
+      : "bg-red-100 text-red-800 ring-1 ring-red-300 dark:bg-red-900/90 dark:text-red-100 dark:ring-red-700");
+    el.textContent = (ok ? "✔ " : "⚠️ ") + message;
     area.append(el);
+    // 錯誤訊息通常比較長，多留一點時間閱讀
     setTimeout(() => {
       el.style.transition = "opacity .3s";
       el.style.opacity = "0";
       setTimeout(() => el.remove(), 300);
-    }, 3500);
+    }, ok ? 3500 : 6000);
   }
 
   // 操作後重新取得課程清單，剩餘名額、衝堂提示與按鈕才會和伺服器一致

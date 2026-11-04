@@ -52,6 +52,38 @@ def _period_rows():
     ]
 
 
+def _week_grid(courses):
+    """把課程排進週課表，回傳（grid, 重疊而沒放進去的課程）。
+
+    起始節次放課程（模板用 rowspan 跨列），其餘節次標成 skip 不輸出格子。
+    課程被改時間後可能和其他課程重疊；重疊的課不放進表格，以免表格錯位。
+    """
+    grid = {day: {} for day, _ in WEEKDAYS}
+    overlaps = []
+    for course in courses:
+        periods = range(course.start_period, course.end_period + 1)
+        day_slots = grid[course.weekday]
+        if any(period in day_slots for period in periods):
+            overlaps.append(course)
+            continue
+        day_slots[course.start_period] = {"course": course, "span": len(periods)}
+        for period in periods[1:]:
+            day_slots[period] = {"skip": True}
+    return grid, overlaps
+
+
+def _week_table_context(courses):
+    """週課表表格（_week_table.html）需要的資料。"""
+    grid, overlaps = _week_grid(courses)
+    return {
+        "grid": grid,
+        "overlaps": overlaps,
+        "weekdays": [day for day, _ in WEEKDAYS],
+        "weekday_labels": WEEKDAYS,
+        "periods": _period_rows(),
+    }
+
+
 # ---------- 登入與密碼 ----------
 
 def login_view(request):
@@ -116,24 +148,6 @@ def my_timetable(request):
         for key in category_labels
     ]
 
-    # 起始節次放課程資料（模板用 rowspan 跨列），其餘節次標成 skip 不輸出格子
-    grid = {day: {} for day, _ in WEEKDAYS}
-    overlaps = []
-    for course in courses:
-        periods = range(course.start_period, course.end_period + 1)
-        day_slots = grid[course.weekday]
-        # 課程被改時間後可能和其他已選課程重疊；重疊的課不放進表格，以免表格錯位
-        if any(period in day_slots for period in periods):
-            overlaps.append(course)
-            continue
-        day_slots[course.start_period] = {
-            "name": course.name,
-            "classroom": course.classroom.name,
-            "span": len(periods),
-        }
-        for period in periods[1:]:
-            day_slots[period] = {"skip": True}
-
     waitlist = [
         {"entry": entry, "position": entry.position}
         for entry in student.waitlist_entries.select_related("course")
@@ -142,12 +156,8 @@ def my_timetable(request):
         "enrollments": enrollments,
         "summary": services.credit_summary(student, courses),
         "category_summary": category_summary,
-        "grid": grid,
-        "overlaps": overlaps,
         "waitlist": waitlist,
-        "weekdays": [day for day, _ in WEEKDAYS],
-        "weekday_labels": WEEKDAYS,
-        "periods": _period_rows(),
+        **_week_table_context(courses),
     })
 
 
@@ -351,6 +361,23 @@ def teacher_courses(request):
 
 
 @login_required
+def teacher_timetable(request):
+    """教師的授課週課表，方便看哪幾天、哪幾節已經有課。"""
+    if not is_teacher(request.user):
+        return redirect("home")
+    courses = list(
+        with_course_counts(Course.objects.filter(teacher=request.user).select_related("classroom"))
+        .order_by("weekday", "start_period")
+    )
+    return render(request, "courses/teacher_timetable.html", {
+        "courses": courses,
+        "weekly_periods": sum(c.end_period - c.start_period + 1 for c in courses),
+        "teacher_view": True,
+        **_week_table_context(courses),
+    })
+
+
+@login_required
 def teacher_course_detail(request, course_id):
     if not is_teacher(request.user):
         return redirect("home")
@@ -422,7 +449,7 @@ def course_create(request):
     else:
         form = CourseForm(user=request.user)
 
-    return render(request, "courses/course_form.html", {"form": form})
+    return _course_form_page(request, form)
 
 
 @login_required
@@ -450,9 +477,35 @@ def course_edit(request, course_id):
     else:
         form = CourseForm(instance=course, user=request.user)
 
+    return _course_form_page(request, form, course)
+
+
+def _course_form_page(request, form, course=None):
+    """開課與編輯課程的頁面。
+
+    附上教師已開的課（依教師分組），頁面旁的小課表用來預覽新時段有沒有和自己的課衝堂。
+    管理員可以替任何教師開課，所以給全部教師的課；編輯時不含正在編輯的這門課。
+    """
+    others = Course.objects.all() if is_admin(request.user) else Course.objects.filter(teacher=request.user)
+    if course is not None:
+        others = others.exclude(pk=course.pk)
+    schedules = {}
+    for other in others.order_by("weekday", "start_period"):
+        schedules.setdefault(str(other.teacher_id), []).append({
+            "name": other.name,
+            "weekday": other.weekday,
+            "start": other.start_period,
+            "end": other.end_period,
+            "time": other.time_label,
+        })
     return render(request, "courses/course_form.html", {
         "form": form,
         "course": course,
+        "schedules": schedules,
+        # 教師開課時沒有「授課教師」欄位，小課表固定顯示自己的課
+        "own_teacher_id": "" if is_admin(request.user) else str(request.user.pk),
+        "weekday_labels": WEEKDAYS,
+        "periods": _period_rows(),
     })
 
 

@@ -1,5 +1,4 @@
 {% extends "courses/base.html" %}
-{% load timetable_tags %}
 {% block title %}我的課表｜選課系統{% endblock %}
 {% block content %}
 <div class="space-y-8">
@@ -60,45 +59,7 @@
       {% for course in overlaps %}[{{ course.code }}] {{ course.name }}{% if not forloop.last %}、{% endif %}{% endfor %}
     </div>
     {% endif %}
-    <table class="w-full min-w-[640px] border-separate border-spacing-1 text-sm">
-      <thead>
-        <tr>
-          <th class="w-16 p-2 text-slate-500 dark:text-slate-400 font-normal">節次</th>
-          {% for day, label in weekday_labels %}
-          <th class="p-2 text-slate-500 dark:text-slate-400 font-normal">{{ label }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for period in periods %}
-        <tr>
-          {# 每列固定高度由節次欄決定，跨節課程的色塊才能剛好填滿 #}
-          <td class="h-16 p-1 text-center align-top text-slate-400">
-            <div class="font-medium">{{ period.number }}</div>
-            {% if period.start %}
-            <div class="text-[11px] leading-tight tabular-nums">{{ period.start|time:"H:i" }}<br>{{ period.end|time:"H:i" }}</div>
-            {% endif %}
-          </td>
-          {% for day in weekdays %}
-          {% with cell=grid|get_item:day|get_item:period.number %}
-          {% if cell.skip %}
-          {# 這一格被上方課程的 rowspan 佔用，不輸出格子 #}
-          {% elif cell %}
-          <td rowspan="{{ cell.span }}" class="relative border-t border-slate-200 dark:border-slate-700">
-            <div class="animate-pop-in absolute inset-1 overflow-hidden rounded-xl p-2 bg-gradient-to-br from-blue-500 to-violet-500 text-white shadow-md ring-1 ring-white/20">
-              <div class="font-semibold leading-tight">{{ cell.name }}</div>
-              <div class="text-xs opacity-90">{{ cell.classroom }}</div>
-            </div>
-          </td>
-          {% else %}
-          <td class="p-1.5 border-t border-slate-200 dark:border-slate-700"></td>
-          {% endif %}
-          {% endwith %}
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% include "courses/_week_table.html" %}
   </div>
 
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow p-6 print:shadow-none">
