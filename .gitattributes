@@ -1,0 +1,7 @@
+# Windows 批次檔一定要用 CRLF 換行，否則在別台電腦 clone 或下載 ZIP 後，
+# cmd 會讀錯 start.bat 的內容（出現「不是內部或外部命令」）。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Render 在 Linux 上執行 build.sh，必須是 LF 換行。
+*.sh text eol=lf
